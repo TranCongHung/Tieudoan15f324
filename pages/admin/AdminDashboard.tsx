@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Article, User, Question, Score, DocumentFile, MediaItem } from '../../types';
+import { Article, User, Question, Score, DocumentFile, MediaItem, Leader } from '../../types';
 import { storage } from '../../services/storage';
 // Removed AI service import
 import { 
@@ -7,14 +7,14 @@ import {
   Image as ImageIcon, Calendar, User as UserIcon, Eye, ArrowLeft, CheckCircle, 
   Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, 
   Type, Quote, Link as LinkIcon, Undo, Redo, Code, Monitor, Palette, Upload, Maximize, Move, Shield,
-  Download, FileSpreadsheet, BarChart3, CalendarDays, FolderPlus, File, Home, DownloadCloud
+  Download, FileSpreadsheet, BarChart3, CalendarDays, FolderPlus, File, Home, DownloadCloud, Briefcase
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { useNavigate } from '../../context/AuthContext';
 import { useAuth } from '../../context/AuthContext';
 import * as XLSX from 'xlsx';
 
-type Tab = 'articles' | 'personnel' | 'questions' | 'scores' | 'documents' | 'media';
+type Tab = 'articles' | 'personnel' | 'questions' | 'scores' | 'documents' | 'media' | 'leaders';
 type ViewMode = 'list' | 'editor';
 type TimeFilter = 'day' | 'week' | 'month';
 
@@ -29,6 +29,7 @@ const AdminDashboard: React.FC = () => {
   const [scores, setScores] = useState<Score[]>([]);
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [leaders, setLeaders] = useState<Leader[]>([]);
 
   // Document Manager States
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -106,10 +107,16 @@ const AdminDashboard: React.FC = () => {
 
   // Set Media Source Type when opening modal
   useEffect(() => {
-      if (isModalOpen && activeTab === 'media') {
+      if (isModalOpen && (activeTab === 'media' || activeTab === 'leaders')) {
+          // Reuse generic "mediaSourceType" for Leader image logic too
           // Check Content Source
-          if (editingItem && editingItem.url && editingItem.url.startsWith('data:')) {
-              setMediaSourceType('upload');
+          if (editingItem && (editingItem.url || editingItem.image)) {
+              const src = editingItem.url || editingItem.image;
+              if (src.startsWith('data:')) {
+                  setMediaSourceType('upload');
+              } else {
+                  setMediaSourceType('link');
+              }
           } else {
               setMediaSourceType('link');
           }
@@ -178,6 +185,7 @@ const AdminDashboard: React.FC = () => {
     setScores(storage.getScores());
     setDocuments(storage.getDocuments());
     setMediaItems(storage.getMedia());
+    setLeaders(storage.getLeaders());
   };
 
   const handleLogout = () => {
@@ -242,6 +250,12 @@ const AdminDashboard: React.FC = () => {
             const newData = mediaItems.filter(i => i.id !== id);
             storage.saveMedia(newData);
             setMediaItems(newData);
+            break;
+        }
+        case 'leaders': {
+            const newData = leaders.filter(i => i.id !== id);
+            storage.saveLeaders(newData);
+            setLeaders(newData);
             break;
         }
     }
@@ -733,6 +747,36 @@ const AdminDashboard: React.FC = () => {
               setMediaItems(newData);
               break;
           }
+          case 'leaders': {
+             // Handle Leader Image
+             let image = formData.get('image') as string;
+             const file = formData.get('imageUpload') as File;
+             
+             if (mediaSourceType === 'upload' && file && file.size > 0) {
+                 if (file.size > 2 * 1024 * 1024) { 
+                     alert("Ảnh quá lớn (Giới hạn 2MB)");
+                     return;
+                 }
+                 image = await new Promise((resolve) => {
+                     const reader = new FileReader();
+                     reader.onload = (e) => resolve(e.target?.result as string);
+                     reader.readAsDataURL(file);
+                 });
+             } else if (mediaSourceType === 'upload' && (!file || file.size === 0) && editingItem) {
+                 image = editingItem.image;
+             }
+
+             const newItem: Leader = {
+                  id,
+                  name: formData.get('name') as string,
+                  role: formData.get('role') as string,
+                  image: image || 'https://picsum.photos/200/200?grayscale',
+              };
+              const newData = editingItem ? leaders.map(i => i.id === id ? newItem : i) : [...leaders, newItem];
+              storage.saveLeaders(newData);
+              setLeaders(newData);
+              break;
+          }
            case 'questions': {
               const optionsRaw = formData.get('options') as string;
               const newItem: Question = {
@@ -847,6 +891,7 @@ const AdminDashboard: React.FC = () => {
                 return a.name.localeCompare(b.name);
             });
         case 'media': return mediaItems.filter(x => x.title.toLowerCase().includes(term));
+        case 'leaders': return leaders.filter(x => x.name.toLowerCase().includes(term) || x.role.toLowerCase().includes(term));
         default: return [];
     }
   };
@@ -1055,7 +1100,8 @@ const AdminDashboard: React.FC = () => {
         questions: editingItem ? 'Chỉnh sửa câu hỏi' : 'Thêm câu hỏi mới',
         scores: editingItem ? 'Chỉnh sửa điểm thi đua' : 'Chấm điểm mới',
         documents: editingItem ? 'Chỉnh sửa tài liệu' : 'Thêm tài liệu mới', // Document creation usually handled by upload
-        media: editingItem ? 'Chỉnh sửa Media' : 'Thêm Media mới'
+        media: editingItem ? 'Chỉnh sửa Media' : 'Thêm Media mới',
+        leaders: editingItem ? 'Chỉnh sửa Ban Chỉ huy' : 'Thêm Chỉ huy mới'
     };
 
     return (
@@ -1232,6 +1278,34 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                              </>
                         )}
+
+                        {activeTab === 'leaders' && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
+                                    <input name="name" type="text" required defaultValue={editingItem?.name} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Chức vụ</label>
+                                    <input name="role" type="text" required defaultValue={editingItem?.role} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                </div>
+                                
+                                {/* Image Selection */}
+                                <div>
+                                     <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh Chân Dung</label>
+                                     <div className="flex space-x-2 mb-2 text-xs">
+                                         <button type="button" onClick={() => setMediaSourceType('link')} className={`px-2 py-1 rounded ${mediaSourceType === 'link' ? 'bg-green-600 text-white' : 'bg-gray-200'}`}>Link URL</button>
+                                         <button type="button" onClick={() => setMediaSourceType('upload')} className={`px-2 py-1 rounded ${mediaSourceType === 'upload' ? 'bg-green-600 text-white' : 'bg-gray-200'}`}>Upload File</button>
+                                     </div>
+                                     
+                                     {mediaSourceType === 'link' ? (
+                                         <input name="image" type="text" placeholder="https://..." defaultValue={editingItem?.image} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                     ) : (
+                                         <input name="imageUpload" type="file" accept="image/*" className="w-full p-2 border border-gray-300 rounded" />
+                                     )}
+                                </div>
+                            </>
+                        )}
                     </form>
                 </div>
                 
@@ -1257,6 +1331,7 @@ const AdminDashboard: React.FC = () => {
             {[
                 { id: 'articles', label: 'Bài viết', icon: FileText },
                 { id: 'personnel', label: 'Người dùng & Phân quyền', icon: Users },
+                { id: 'leaders', label: 'Ban Chỉ huy', icon: Briefcase },
                 { id: 'media', label: 'Thư viện Media', icon: Film },
                 { id: 'questions', label: 'Kho câu hỏi', icon: HelpCircle },
                 { id: 'scores', label: 'Thi đua', icon: Award },
@@ -1306,7 +1381,8 @@ const AdminDashboard: React.FC = () => {
           questions: 'Ngân hàng Câu hỏi',
           scores: 'Chấm điểm Thi đua',
           documents: 'Kho Lưu Trữ Số',
-          media: 'Thư viện Đa phương tiện'
+          media: 'Thư viện Đa phương tiện',
+          leaders: 'Ban Chỉ huy Tiểu đoàn'
       };
 
       return (
@@ -1513,6 +1589,13 @@ const AdminDashboard: React.FC = () => {
                                     <th className="px-6 py-4 text-left text-xs font-bold text-green-800 uppercase tracking-wider">Ngày đăng</th>
                                 </>
                               )}
+                              {activeTab === 'leaders' && (
+                                <>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-green-800 uppercase tracking-wider">Hình ảnh</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-green-800 uppercase tracking-wider">Họ tên</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-green-800 uppercase tracking-wider">Chức vụ</th>
+                                </>
+                              )}
                               <th className="px-6 py-4 text-right text-xs font-bold text-green-800 uppercase tracking-wider">Thao tác</th>
                           </tr>
                       </thead>
@@ -1611,6 +1694,15 @@ const AdminDashboard: React.FC = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.title}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.date}</td>
+                                    </>
+                                  )}
+                                  {activeTab === 'leaders' && (
+                                    <>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <img src={item.image} alt={item.name} className="w-12 h-12 rounded-full object-cover border border-gray-200"/>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.name}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.role}</td>
                                     </>
                                   )}
 

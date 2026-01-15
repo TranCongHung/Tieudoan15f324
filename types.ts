@@ -18,6 +18,13 @@ export interface Soldier {
   dateOfBirth: string;
 }
 
+export interface Leader {
+  id: string;
+  name: string;
+  role: string; // Chức vụ hiển thị (VD: Tiểu đoàn trưởng)
+  image: string; // URL ảnh
+}
+
 export interface Question {
   id: string;
   questionText: string;

@@ -58,7 +58,7 @@ const ArticleDetail: React.FC = () => {
 
   if (loading) {
       return (
-          <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+          <div className="min-h-screen bg-[#fdfbf7] flex items-center justify-center">
               <div className="w-12 h-12 border-4 border-green-200 border-t-green-800 rounded-full animate-spin"></div>
           </div>
       );
@@ -66,12 +66,12 @@ const ArticleDetail: React.FC = () => {
 
   if (!article) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
+      <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4 bg-[#fdfbf7]">
         <h2 className="text-3xl font-display font-bold text-gray-800 mb-4">Không tìm thấy bài viết</h2>
-        <p className="text-gray-600 mb-8">Bài viết này có thể đã bị xóa hoặc đường dẫn không tồn tại.</p>
+        <p className="text-gray-600 mb-8 font-serif">Bài viết này có thể đã bị xóa hoặc đường dẫn không tồn tại.</p>
         <button 
             onClick={() => navigate('/')}
-            className="px-6 py-3 bg-green-700 text-white rounded-lg font-bold hover:bg-green-800 transition-colors flex items-center"
+            className="px-6 py-3 bg-green-700 text-white rounded-lg font-bold hover:bg-green-800 transition-colors flex items-center shadow-md"
         >
             <ArrowLeft className="w-5 h-5 mr-2" /> Quay về trang chủ
         </button>
@@ -80,188 +80,187 @@ const ArticleDetail: React.FC = () => {
   }
 
   return (
-    <div className="bg-[#fdfbf7] min-h-screen pb-20">
+    <div className="bg-[#fcfaf7] min-h-screen pb-20">
       {/* Breadcrumb / Top Bar */}
-      <div className="bg-white border-b border-gray-200 sticky top-20 z-30 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-             <Link to="/" className="text-gray-500 hover:text-green-800 flex items-center text-sm font-medium transition-colors">
-                <ArrowLeft className="w-4 h-4 mr-1" /> Trang chủ
+      <div className="bg-white border-b border-gray-200 sticky top-20 z-30 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_10px_20px_-2px_rgba(0,0,0,0.04)]">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+             <Link to="/" className="text-gray-500 hover:text-green-800 flex items-center text-sm font-bold uppercase tracking-wide transition-colors">
+                <ArrowLeft className="w-4 h-4 mr-2" /> Trang chủ
              </Link>
-             <div className="flex items-center space-x-4">
-                 <button className="text-gray-400 hover:text-green-800 transition-colors" title="Chia sẻ"><Share2 className="w-4 h-4" /></button>
-                 <button className="text-gray-400 hover:text-green-800 transition-colors" title="In bài viết" onClick={() => window.print()}><Printer className="w-4 h-4" /></button>
+             <div className="flex items-center space-x-6">
+                 <button className="text-gray-400 hover:text-green-800 transition-colors flex items-center text-xs font-bold uppercase tracking-wider"><Share2 className="w-4 h-4 mr-1" /> Chia sẻ</button>
+                 <button className="text-gray-400 hover:text-green-800 transition-colors flex items-center text-xs font-bold uppercase tracking-wider" onClick={() => window.print()}><Printer className="w-4 h-4 mr-1" /> In bài</button>
              </div>
           </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="flex flex-col lg:flex-row gap-12">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="flex flex-col lg:flex-row gap-16">
             
             {/* Main Content (Left) */}
-            <div className="w-full lg:w-2/3">
-                <article className="animate-fade-in-up">
-                    {/* Meta Info */}
-                    <div className="flex items-center space-x-4 text-sm text-gray-500 mb-6 font-medium">
-                         <span className="flex items-center bg-green-50 text-green-700 px-3 py-1 rounded-full border border-green-100 uppercase text-xs tracking-wider font-bold">
-                            Tin tức
-                         </span>
-                         <span className="flex items-center"><Calendar className="w-4 h-4 mr-1 text-yellow-500"/> {article.date}</span>
-                         <span className="flex items-center"><User className="w-4 h-4 mr-1 text-yellow-500"/> {article.author}</span>
+            <div className="w-full lg:w-3/4">
+                <article className="animate-fade-in-up bg-white p-8 md:p-12 shadow-sm rounded-none md:rounded-lg border border-gray-100">
+                    {/* Header Section */}
+                    <div className="text-center mb-10">
+                        <div className="flex items-center justify-center space-x-3 text-xs md:text-sm text-gray-500 mb-6 font-bold uppercase tracking-widest">
+                             <span className="text-green-700 bg-green-50 px-3 py-1 rounded">Tin tức</span>
+                             <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                             <span className="flex items-center"><Calendar className="w-3 h-3 mr-1 text-yellow-600"/> {article.date}</span>
+                        </div>
+
+                        {/* Title */}
+                        <h1 className="text-3xl md:text-5xl font-display font-black text-gray-900 mb-6 leading-tight">
+                            {article.title}
+                        </h1>
+                        
+                        <div className="flex items-center justify-center text-sm text-gray-500 font-medium italic font-serif">
+                            <span className="flex items-center">Bởi <User className="w-4 h-4 mx-1 text-green-700"/> <span className="text-green-800 font-bold not-italic">{article.author}</span></span>
+                        </div>
                     </div>
 
-                    {/* Title */}
-                    <h1 className="text-3xl md:text-5xl font-display font-black text-green-900 mb-8 leading-tight">
-                        {article.title}
-                    </h1>
-
                     {/* Summary (Sapo) */}
-                    <div className="text-xl font-serif text-gray-700 italic border-l-4 border-yellow-500 pl-6 mb-10 leading-relaxed bg-yellow-50/50 py-4 pr-4 rounded-r-lg">
+                    <div className="text-lg md:text-xl font-serif text-gray-700 leading-relaxed font-medium mb-10 text-justify-pretty border-t border-b border-gray-100 py-8 first-letter:text-5xl first-letter:float-left first-letter:mr-3 first-letter:text-green-800 first-letter:font-display first-letter:font-black">
                         {article.summary}
                     </div>
 
                     {/* Featured Image */}
                     {article.imageUrl && (
-                        <div className="mb-10 rounded-xl overflow-hidden shadow-lg">
-                            <img src={article.imageUrl} alt={article.title} className="w-full h-auto object-cover" />
-                            <div className="bg-gray-100 p-2 text-center text-xs text-gray-500 italic">
-                                Hình ảnh minh họa hoạt động
+                        <figure className="mb-12">
+                            <div className="rounded-sm overflow-hidden shadow-lg border border-gray-200">
+                                <img src={article.imageUrl} alt={article.title} className="w-full h-auto object-cover" />
                             </div>
-                        </div>
+                            <figcaption className="mt-3 text-center text-xs text-gray-500 italic font-serif">
+                                Hình ảnh minh họa hoạt động của đơn vị
+                            </figcaption>
+                        </figure>
                     )}
 
-                    {/* Body Content */}
+                    {/* Body Content - Highly Styled Typography */}
                     <div 
-                        className="prose prose-lg prose-stone max-w-none font-serif text-gray-800 leading-loose
-                        prose-headings:font-display prose-headings:font-bold prose-headings:text-green-900
-                        prose-a:text-green-700 prose-a:font-bold hover:prose-a:text-green-900
-                        prose-img:rounded-xl prose-img:shadow-md
-                        prose-blockquote:border-l-green-700 prose-blockquote:text-green-800 prose-blockquote:bg-green-50 prose-blockquote:py-2 prose-blockquote:pr-4"
+                        className="prose prose-lg md:prose-xl prose-stone max-w-none font-serif text-gray-800 
+                        prose-p:text-justify-pretty prose-p:leading-8 prose-p:mb-6
+                        prose-headings:font-display prose-headings:font-bold prose-headings:text-green-900 prose-headings:mt-10 prose-headings:mb-6
+                        prose-a:text-green-700 prose-a:font-bold prose-a:no-underline hover:prose-a:text-green-900 hover:prose-a:underline
+                        prose-img:rounded-lg prose-img:shadow-md prose-img:my-8
+                        prose-blockquote:border-l-4 prose-blockquote:border-yellow-500 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-gray-700 prose-blockquote:bg-yellow-50/30 prose-blockquote:py-2
+                        prose-strong:text-green-900 prose-strong:font-black
+                        prose-ul:list-disc prose-ul:pl-6 prose-li:mb-2
+                        "
                         dangerouslySetInnerHTML={{ __html: article.content }} 
                     />
 
                     {/* Tags / Footer */}
-                    <div className="mt-12 pt-6 border-t border-gray-200 flex flex-wrap gap-2">
-                        <Tag className="w-5 h-5 text-gray-400 mr-2" />
-                        {['Quân sự', 'Tiểu đoàn 15', 'Huấn luyện', 'Sư đoàn 324'].map(tag => (
-                            <span key={tag} className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-sm cursor-pointer transition-colors">
-                                #{tag}
-                            </span>
-                        ))}
+                    <div className="mt-16 pt-8 border-t border-gray-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div className="flex flex-wrap gap-2">
+                            <Tag className="w-4 h-4 text-green-700 mt-1" />
+                            {['Quân sự', 'Tiểu đoàn 15', 'Huấn luyện', 'Sư đoàn 324'].map(tag => (
+                                <span key={tag} className="px-3 py-1 bg-gray-100 hover:bg-green-100 text-gray-600 hover:text-green-800 rounded text-xs font-bold uppercase tracking-wide cursor-pointer transition-colors">
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
+                        <div className="text-gray-400 italic font-serif text-sm">
+                            &copy; Bản quyền thuộc về Tiểu đoàn 15
+                        </div>
                     </div>
                 </article>
 
                 {/* --- COMMENT SECTION --- */}
-                <div className="mt-16 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                        <h3 className="font-display font-bold text-xl text-green-900 flex items-center">
-                            <MessageSquare className="w-5 h-5 mr-2" /> Bình luận ({comments.length})
-                        </h3>
+                <div className="mt-12">
+                    <div className="flex items-center space-x-3 mb-8">
+                        <MessageSquare className="w-6 h-6 text-green-800" />
+                        <h3 className="font-display font-bold text-2xl text-green-900">Bình luận ({comments.length})</h3>
                     </div>
 
-                    <div className="p-6">
+                    <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
                         {/* Comment Form */}
                         {user ? (
-                            <form onSubmit={handleCommentSubmit} className="mb-10 flex gap-4">
-                                <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center font-bold text-green-700">
+                            <form onSubmit={handleCommentSubmit} className="mb-12 flex gap-4">
+                                <div className="flex-shrink-0 w-12 h-12 bg-green-900 rounded-full flex items-center justify-center font-bold text-white shadow-md">
                                     {user.name.charAt(0)}
                                 </div>
-                                <div className="flex-grow">
+                                <div className="flex-grow relative">
                                     <textarea
                                         value={commentText}
                                         onChange={(e) => setCommentText(e.target.value)}
                                         placeholder="Viết bình luận của đồng chí..."
                                         rows={3}
-                                        className="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm"
+                                        className="w-full border border-gray-300 rounded-lg p-4 pr-12 focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none text-sm font-serif"
                                         required
                                     ></textarea>
-                                    <div className="mt-2 flex justify-end">
-                                        <button 
-                                            type="submit" 
-                                            disabled={!commentText.trim()}
-                                            className="px-4 py-2 bg-green-700 text-white rounded-lg font-bold text-sm hover:bg-green-800 transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <Send className="w-4 h-4 mr-2" /> Gửi bình luận
-                                        </button>
-                                    </div>
+                                    <button 
+                                        type="submit" 
+                                        disabled={!commentText.trim()}
+                                        className="absolute bottom-3 right-3 p-2 bg-green-700 text-white rounded-md hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                        title="Gửi"
+                                    >
+                                        <Send className="w-4 h-4" />
+                                    </button>
                                 </div>
                             </form>
                         ) : (
-                             <div className="mb-10 bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-                                 <p className="text-gray-700 mb-4">Vui lòng đăng nhập để tham gia thảo luận.</p>
-                                 <Link to="/login" className="inline-flex items-center px-6 py-2 bg-green-700 text-white rounded-lg font-bold hover:bg-green-800 transition-colors">
+                             <div className="mb-10 bg-yellow-50 border border-yellow-100 rounded-lg p-8 text-center">
+                                 <p className="text-gray-800 mb-4 font-serif">Vui lòng đăng nhập để tham gia thảo luận cùng đơn vị.</p>
+                                 <Link to="/login" className="inline-flex items-center px-6 py-2.5 bg-green-700 text-white rounded font-bold hover:bg-green-800 transition-colors shadow-lg hover:-translate-y-0.5 transform">
                                      <LogIn className="w-4 h-4 mr-2"/> Đăng nhập ngay
                                  </Link>
                              </div>
                         )}
 
                         {/* Comments List */}
-                        <div className="space-y-6">
+                        <div className="space-y-8">
                             {comments.length > 0 ? (
                                 comments.map((comment) => (
                                     <div key={comment.id} className="flex gap-4 group">
-                                        <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center font-bold text-gray-500 border border-gray-200">
+                                        <div className="flex-shrink-0 w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-bold text-gray-500 border border-gray-300 mt-1">
                                             {comment.userName.charAt(0)}
                                         </div>
                                         <div className="flex-grow">
-                                            <div className="bg-gray-50 p-4 rounded-r-2xl rounded-bl-2xl">
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <div>
-                                                        <span className="font-bold text-gray-900 text-sm mr-2">{comment.userName}</span>
+                                            <div className="bg-gray-50 p-5 rounded-2xl rounded-tl-none border border-gray-100">
+                                                <div className="flex justify-between items-baseline mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-gray-900 text-sm">{comment.userName}</span>
                                                         {comment.userRank && (
-                                                            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">{comment.userRank}</span>
+                                                            <span className="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold uppercase tracking-wider border border-green-200">{comment.userRank}</span>
                                                         )}
                                                     </div>
-                                                    <span className="text-xs text-gray-400">{comment.date}</span>
+                                                    <span className="text-xs text-gray-400 flex items-center"><Clock className="w-3 h-3 mr-1"/> {comment.date}</span>
                                                 </div>
-                                                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">{comment.content}</p>
+                                                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line font-serif">{comment.content}</p>
                                             </div>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center text-gray-400 italic py-4">
-                                    Chưa có bình luận nào. Hãy là người đầu tiên!
+                                <div className="text-center py-10 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                                    <MessageSquare className="w-10 h-10 text-gray-300 mx-auto mb-3"/>
+                                    <p className="text-gray-500 italic font-serif">Chưa có bình luận nào. Hãy là người đầu tiên!</p>
                                 </div>
                             )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Navigation (Next/Prev) Mockup */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 pt-12 border-t border-gray-200">
-                    <div className="group cursor-pointer">
-                        <div className="text-xs text-gray-400 uppercase font-bold mb-1">Bài viết trước</div>
-                        <div className="font-display font-bold text-lg text-gray-800 group-hover:text-green-700 transition-colors">
-                             ← Hội thi văn nghệ quần chúng năm 2023
-                        </div>
-                    </div>
-                     <div className="group cursor-pointer text-right">
-                        <div className="text-xs text-gray-400 uppercase font-bold mb-1">Bài viết tiếp theo</div>
-                        <div className="font-display font-bold text-lg text-gray-800 group-hover:text-green-700 transition-colors">
-                             Kế hoạch trực sẵn sàng chiến đấu dịp Lễ →
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Sidebar (Right) */}
-            <div className="w-full lg:w-1/3 space-y-8">
+            <div className="w-full lg:w-1/4 space-y-10">
                 {/* Related News Widget */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 sticky top-40">
-                    <h3 className="text-xl font-bold font-display text-green-900 mb-6 pb-2 border-b-2 border-yellow-500 inline-block">
+                <div className="sticky top-40">
+                    <h3 className="text-lg font-bold font-display text-green-900 mb-6 pb-2 border-b-2 border-yellow-500 inline-block uppercase tracking-wider">
                         Tin liên quan
                     </h3>
                     <div className="space-y-6">
                         {relatedArticles.map((item) => (
-                            <Link to={`/article/${item.id}`} key={item.id} className="group flex space-x-4 items-start">
-                                <div className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden">
-                                    <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                            <Link to={`/article/${item.id}`} key={item.id} className="group flex flex-col gap-2">
+                                <div className="w-full h-32 rounded-lg overflow-hidden relative shadow-sm">
+                                    <img src={item.imageUrl} alt={item.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-gray-800 group-hover:text-green-700 transition-colors line-clamp-3 text-sm leading-relaxed">
+                                    <h4 className="font-bold text-gray-800 group-hover:text-green-700 transition-colors line-clamp-2 text-sm leading-snug font-display">
                                         {item.title}
                                     </h4>
-                                    <div className="flex items-center text-xs text-gray-400 mt-2">
+                                    <div className="flex items-center text-xs text-gray-400 mt-2 font-medium">
                                         <Clock className="w-3 h-3 mr-1" /> {item.date}
                                     </div>
                                 </div>
@@ -269,14 +268,16 @@ const ArticleDetail: React.FC = () => {
                         ))}
                     </div>
 
-                    <div className="mt-8 pt-6 border-t border-gray-100">
-                        <h4 className="font-bold text-sm text-gray-700 mb-4 uppercase">Tiêu điểm</h4>
-                        <div className="relative rounded-lg overflow-hidden h-48 group cursor-pointer">
-                             <img src="https://picsum.photos/400/300?random=88" className="w-full h-full object-cover" alt="Banner" />
-                             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-4">
-                                 <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded w-fit mb-2">NỔI BẬT</span>
-                                 <p className="text-white font-bold text-sm leading-tight group-hover:underline">Gương mặt trẻ tiêu biểu toàn quân năm 2024</p>
+                    <div className="mt-10 pt-8 border-t border-gray-200">
+                        <div className="bg-green-900 text-white rounded-lg p-6 text-center shadow-lg relative overflow-hidden">
+                             <div className="absolute top-0 right-0 -mr-4 -mt-4 w-20 h-20 bg-yellow-500 rounded-full opacity-20 blur-xl"></div>
+                             <h4 className="font-display font-bold text-xl mb-2 relative z-10">Gương mặt tiêu biểu</h4>
+                             <div className="w-10 h-1 bg-yellow-500 mx-auto mb-4 relative z-10"></div>
+                             <div className="w-20 h-20 mx-auto rounded-full border-4 border-yellow-500/50 mb-3 overflow-hidden shadow-md relative z-10">
+                                <img src="https://picsum.photos/200/200?random=88" className="w-full h-full object-cover" alt="Avatar"/>
                              </div>
+                             <p className="text-yellow-400 font-bold text-sm uppercase tracking-wide relative z-10">Trung úy Nguyễn Văn A</p>
+                             <p className="text-green-200 text-xs italic mt-1 relative z-10">"Chiến sĩ thi đua toàn quân"</p>
                         </div>
                     </div>
                 </div>

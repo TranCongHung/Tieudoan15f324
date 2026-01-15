@@ -17,14 +17,14 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Inter', 'sans-serif'], // Default for UI
-              serif: ['Merriweather', 'serif'], // For reading text
-              display: ['Playfair Display', 'serif'], // For Hero titles
+              sans: ['Inter', 'sans-serif'], // UI text, buttons, navigation
+              serif: ['Merriweather', 'serif'], // Long reading text, quotes
+              display: ['Playfair Display', 'serif'], // Large Headings
             },
             animation: {
-              'fade-in': 'fadeIn 0.5s ease-out',
+              'fade-in': 'fadeIn 0.6s ease-out',
               'fade-in-up': 'fadeInUp 0.8s ease-out',
-              'scale-up': 'scaleUp 0.4s ease-out',
+              'scale-up': 'scaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
               'bounce-slow': 'bounce 3s infinite',
             },
             keyframes: {
@@ -33,14 +33,23 @@
                 '100%': { opacity: '1' },
               },
               fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(20px)' },
-                '100%': { opacity: '1' },
+                '0%': { opacity: '0', transform: 'translateY(30px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
               },
               scaleUp: {
-                '0%': { opacity: '0', transform: 'scale(0.9)' },
+                '0%': { opacity: '0', transform: 'scale(0.95)' },
                 '100%': { opacity: '1', transform: 'scale(1)' },
               }
-            }
+            },
+            typography: (theme) => ({
+              DEFAULT: {
+                css: {
+                  color: theme('colors.gray.800'),
+                  fontFamily: theme('fontFamily.serif'),
+                  lineHeight: '1.8',
+                },
+              },
+            }),
           }
         }
       }
@@ -52,32 +61,47 @@
         font-family: 'Inter', sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        color: #1f2937; /* Gray 800 */
       }
       
-      h1, h2, h3, h4, h5, h6 {
-        /* Default headings can use sans or display based on class, 
-           but let's keep specific classes in components */
+      /* Typography Helpers */
+      .text-justify-pretty {
+        text-align: justify;
+        text-justify: inter-word;
+      }
+
+      .drop-cap::first-letter {
+        float: left;
+        font-size: 3.5rem;
+        line-height: 0.8;
+        font-weight: 900;
+        margin-right: 0.5rem;
+        margin-top: 0.2rem;
+        color: #15803d; /* green-700 */
+        font-family: 'Playfair Display', serif;
       }
 
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
         width: 8px;
+        height: 8px;
       }
       ::-webkit-scrollbar-track {
         background: #f1f1f1; 
       }
       ::-webkit-scrollbar-thumb {
-        background: #15803d; /* green-700 */
+        background: #c2c8d0;
         border-radius: 4px;
+        transition: background 0.3s;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #14532d; /* green-900 */
+        background: #15803d; /* green-700 */
       }
       
       /* Subtle Texture Pattern */
       .bg-texture {
-        background-color: #fcfdfc;
-        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23166534' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        background-color: #f9fafb;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23166534' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
       }
 
       .custom-scrollbar::-webkit-scrollbar {
@@ -106,7 +130,7 @@
 }
 </script>
 </head>
-  <body class="bg-texture text-gray-800">
+  <body class="bg-texture">
     <div id="root"></div>
   </body>
 </html>

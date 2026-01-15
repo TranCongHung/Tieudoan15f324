@@ -1,29 +1,14 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Target, Users, Award, MapPin, Shield, Check } from 'lucide-react';
+import { storage } from '../services/storage';
+import { Leader } from '../types';
 
 const About: React.FC = () => {
-  const leaders = [
-    {
-      name: "Thiếu tá Nguyễn Văn A",
-      role: "Tiểu đoàn trưởng",
-      image: "https://picsum.photos/200/200?random=10"
-    },
-    {
-      name: "Đại úy Trần Văn B",
-      role: "Chính trị viên",
-      image: "https://picsum.photos/200/200?random=11"
-    },
-    {
-      name: "Đại úy Lê Văn C",
-      role: "Phó Tiểu đoàn trưởng",
-      image: "https://picsum.photos/200/200?random=12"
-    },
-    {
-      name: "Đại úy Phạm Văn D",
-      role: "Phó Tiểu đoàn trưởng",
-      image: "https://picsum.photos/200/200?random=13"
-    }
-  ];
+  const [leaders, setLeaders] = useState<Leader[]>([]);
+
+  useEffect(() => {
+    setLeaders(storage.getLeaders());
+  }, []);
 
   return (
     <div className="bg-stone-50 pb-12">
@@ -143,8 +128,8 @@ const About: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                {leaders.map((leader, index) => (
-                    <div key={index} className="bg-white rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 group border border-gray-100">
+                {leaders.map((leader) => (
+                    <div key={leader.id} className="bg-white rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 group border border-gray-100">
                         <div className="h-4 bg-gradient-to-r from-green-600 to-green-800"></div>
                         <div className="p-8 text-center flex flex-col h-full">
                             <div className="w-32 h-32 mx-auto mb-6 rounded-full p-1 bg-gradient-to-b from-yellow-400 to-yellow-600">

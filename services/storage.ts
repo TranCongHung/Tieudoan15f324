@@ -1,4 +1,4 @@
-import { Article, Soldier, Question, Score, DocumentFile, User, QuizResult, MediaItem, Comment } from '../types';
+import { Article, Soldier, Question, Score, DocumentFile, User, QuizResult, MediaItem, Comment, Leader } from '../types';
 
 // Initial Mock Data
 const INITIAL_ARTICLES: Article[] = [
@@ -20,6 +20,33 @@ const INITIAL_ARTICLES: Article[] = [
     date: '2024-03-15',
     author: 'Phan Văn A'
   }
+];
+
+const INITIAL_LEADERS: Leader[] = [
+    {
+      id: '1',
+      name: "Thiếu tá Nguyễn Văn A",
+      role: "Tiểu đoàn trưởng",
+      image: "https://picsum.photos/200/200?random=10"
+    },
+    {
+      id: '2',
+      name: "Đại úy Trần Văn B",
+      role: "Chính trị viên",
+      image: "https://picsum.photos/200/200?random=11"
+    },
+    {
+      id: '3',
+      name: "Đại úy Lê Văn C",
+      role: "Phó Tiểu đoàn trưởng",
+      image: "https://picsum.photos/200/200?random=12"
+    },
+    {
+      id: '4',
+      name: "Đại úy Phạm Văn D",
+      role: "Phó Tiểu đoàn trưởng",
+      image: "https://picsum.photos/200/200?random=13"
+    }
 ];
 
 const INITIAL_SOLDIERS: Soldier[] = [
@@ -230,6 +257,9 @@ const saveToStorage = <T,>(key: string, data: T): void => {
 export const storage = {
   getArticles: () => getFromStorage<Article[]>('articles', INITIAL_ARTICLES),
   saveArticles: (data: Article[]) => saveToStorage('articles', data),
+
+  getLeaders: () => getFromStorage<Leader[]>('leaders', INITIAL_LEADERS),
+  saveLeaders: (data: Leader[]) => saveToStorage('leaders', data),
 
   getSoldiers: () => getFromStorage<Soldier[]>('soldiers', INITIAL_SOLDIERS),
   saveSoldiers: (data: Soldier[]) => saveToStorage('soldiers', data),
