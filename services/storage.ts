@@ -238,15 +238,23 @@ const INITIAL_COMMENTS: Comment[] = [
 const getFromStorage = <T,>(key: string, initial: T): T => {
   try {
     const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : initial;
+    // Check for "undefined" or "null" strings which can cause JSON.parse to crash
+    if (!item || item === "undefined" || item === "null") return initial;
+    return JSON.parse(item);
   } catch (error) {
     console.error(`Error reading ${key} from localStorage`, error);
+    // If error occurs (e.g. syntax error), clear the corrupted key
+    localStorage.removeItem(key);
     return initial;
   }
 };
 
 const saveToStorage = <T,>(key: string, data: T): void => {
   try {
+    if (data === undefined) {
+      localStorage.removeItem(key);
+      return;
+    }
     localStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
     console.error(`Error saving ${key} to localStorage`, error);
