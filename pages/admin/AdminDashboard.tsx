@@ -151,6 +151,8 @@ const AdminDashboard: React.FC = () => {
   }, [isModalOpen, editingItem, activeTab]);
 
   // --- FIX CURSOR JUMPING ---
+  // This useEffect handles the initial data load into the div.
+  // We rely on this instead of dangerouslySetInnerHTML to prevent re-renders on typing.
   useEffect(() => {
     if (isVisualMode && editorContentRef.current) {
         if (editorContentRef.current.innerHTML !== editorContent) {
@@ -1167,10 +1169,10 @@ const AdminDashboard: React.FC = () => {
                           <div
                               ref={editorContentRef}
                               contentEditable
+                              suppressContentEditableWarning={true}
                               onInput={handleEditorInput}
                               onClick={handleEditorClick}
                               className="prose prose-lg max-w-none min-h-[500px] outline-none"
-                              dangerouslySetInnerHTML={{ __html: editorContent }}
                           ></div>
                       ) : (
                           <textarea
