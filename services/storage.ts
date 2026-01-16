@@ -1,5 +1,24 @@
 import { Article, Soldier, Question, Score, DocumentFile, User, QuizResult, MediaItem, Comment, Leader, SiteSettings, Milestone } from '../types';
 
+/* 
+   LƯU Ý QUAN TRỌNG VỀ DATABASE (MYSQL):
+   
+   Hiện tại hệ thống đang sử dụng LocalStorage để chạy Demo trực tiếp trên trình duyệt.
+   Để chuyển sang lưu dữ liệu bằng MySQL, đồng chí cần:
+   
+   1. Cài đặt Backend:
+      - Cài đặt Node.js và MySQL.
+      - Chạy file script SQL `database.sql` để tạo bảng.
+      - Cài đặt thư viện: `npm install express mysql2 cors body-parser`.
+      - Chạy server backend: `node server.js` (Code có trong file server.js).
+      
+   2. Chuyển đổi Service:
+      - Sử dụng file `services/api.ts` thay thế cho file này.
+      - Cập nhật các Component (Home, History, AdminDashboard...) để xử lý bất đồng bộ (async/await) khi gọi hàm.
+      
+   Dưới đây là dữ liệu mẫu giả lập cho phiên bản Demo:
+*/
+
 // Initial Mock Data
 const INITIAL_ARTICLES: Article[] = [
   {
