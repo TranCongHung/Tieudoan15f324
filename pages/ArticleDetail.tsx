@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { storage } from '../services/storage';
 import { Article, Comment } from '../types';
-import { Calendar, User, ArrowLeft, Clock, Share2, Printer, Tag, MessageSquare, Send, LogIn } from 'lucide-react';
+import { Calendar, User, ArrowLeft, Clock, Share2, Printer, Tag, MessageSquare, Send, LogIn, ImageIcon } from 'lucide-react';
 import { useAuth, useParams, Link, useNavigate } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteContext';
 
@@ -102,49 +102,54 @@ const ArticleDetail: React.FC = () => {
             
             {/* Main Content (Left) */}
             <div className="w-full lg:w-3/4">
-                <article className="animate-fade-in-up bg-white p-8 md:p-12 shadow-sm rounded-none md:rounded-lg border border-gray-100">
+                <article className="animate-fade-in-up bg-white p-8 md:p-12 shadow-sm rounded-none md:rounded-2xl border border-gray-100 relative overflow-hidden">
+                    
+                    {/* Decorative Top Border */}
+                    <div className="absolute top-0 left-0 w-full h-1" style={{ background: `linear-gradient(to right, ${settings.primaryColor}, ${settings.secondaryColor})` }}></div>
+
                     {/* Header Section */}
-                    <div className="text-center mb-10">
-                        <div className="flex items-center justify-center space-x-3 text-xs md:text-sm text-gray-500 mb-6 font-bold uppercase tracking-widest">
-                             <span className="bg-green-50 px-3 py-1 rounded" style={{ color: settings.primaryColor }}>Tin tức</span>
+                    <div className="mb-8">
+                        <div className="flex flex-wrap items-center gap-4 text-xs md:text-sm text-gray-500 mb-6 font-bold uppercase tracking-widest">
+                             <span className="bg-green-50 px-3 py-1 rounded-full border border-green-100" style={{ color: settings.primaryColor }}>Tin tức</span>
                              <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                              <span className="flex items-center"><Calendar className="w-3 h-3 mr-1 text-yellow-600"/> {article.date}</span>
+                             <span className="w-1 h-1 bg-gray-300 rounded-full hidden sm:block"></span>
+                             <span className="flex items-center hidden sm:flex">Bởi <User className="w-3 h-3 mx-1" style={{ color: settings.primaryColor }}/> <span className="font-bold" style={{ color: settings.primaryColor }}>{article.author}</span></span>
                         </div>
 
                         {/* Title */}
-                        <h1 className="text-3xl md:text-5xl font-display font-black text-gray-900 mb-6 leading-tight">
+                        <h1 className="text-3xl md:text-5xl font-display font-black text-gray-900 leading-tight mb-2">
                             {article.title}
                         </h1>
-                        
-                        <div className="flex items-center justify-center text-sm text-gray-500 font-medium italic font-serif">
-                            <span className="flex items-center">Bởi <User className="w-4 h-4 mx-1" style={{ color: settings.primaryColor }}/> <span className="font-bold not-italic" style={{ color: settings.primaryColor }}>{article.author}</span></span>
-                        </div>
                     </div>
+
+                    {/* Featured Image (Redesigned) */}
+                    {article.imageUrl && (
+                        <div className="mb-10 -mx-8 md:-mx-12 md:rounded-lg overflow-hidden group relative">
+                            <img 
+                                src={article.imageUrl} 
+                                alt={article.title} 
+                                className="w-full h-auto max-h-[500px] object-cover transition-transform duration-1000 group-hover:scale-105" 
+                            />
+                            {/* Overlay Gradient for visual depth */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none"></div>
+                            
+                            <div className="bg-gray-50 border-t border-gray-100 p-3 text-center">
+                                <p className="text-xs text-gray-500 italic font-serif flex items-center justify-center">
+                                    <ImageIcon className="w-3 h-3 mr-1.5 opacity-70"/> 
+                                    Hình ảnh minh họa hoạt động của đơn vị
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Summary (Sapo) */}
                     <div 
-                        className="text-lg md:text-xl font-serif text-gray-700 leading-relaxed font-medium mb-10 text-justify-pretty border-t border-b border-gray-100 py-8 first-letter:text-5xl first-letter:float-left first-letter:mr-3 first-letter:font-display first-letter:font-black"
-                        style={{ '--tw-first-letter-color': settings.primaryColor } as any}
+                        className="text-lg md:text-xl font-serif text-gray-800 leading-relaxed font-semibold mb-10 pl-6 border-l-4 italic"
+                        style={{ borderColor: settings.secondaryColor }}
                     >
-                        <style>{`
-                            .first-letter-dynamic::first-letter {
-                                color: ${settings.primaryColor};
-                            }
-                        `}</style>
-                        <div className="first-letter-dynamic">{article.summary}</div>
+                        {article.summary}
                     </div>
-
-                    {/* Featured Image */}
-                    {article.imageUrl && (
-                        <figure className="mb-12">
-                            <div className="rounded-sm overflow-hidden shadow-lg border border-gray-200">
-                                <img src={article.imageUrl} alt={article.title} className="w-full h-auto object-cover" />
-                            </div>
-                            <figcaption className="mt-3 text-center text-xs text-gray-500 italic font-serif">
-                                Hình ảnh minh họa hoạt động của đơn vị
-                            </figcaption>
-                        </figure>
-                    )}
 
                     {/* Body Content - Highly Styled Typography */}
                     <div 
@@ -152,9 +157,9 @@ const ArticleDetail: React.FC = () => {
                         prose-p:text-justify-pretty prose-p:leading-8 prose-p:mb-6
                         prose-headings:font-display prose-headings:font-bold prose-headings:mt-10 prose-headings:mb-6
                         prose-a:font-bold prose-a:no-underline hover:prose-a:underline
-                        prose-img:rounded-lg prose-img:shadow-md prose-img:my-8
-                        prose-blockquote:border-l-4 prose-blockquote:border-yellow-500 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-gray-700 prose-blockquote:bg-yellow-50/30 prose-blockquote:py-2
-                        prose-strong:font-black
+                        prose-img:rounded-lg prose-img:shadow-md prose-img:my-8 prose-img:mx-auto
+                        prose-blockquote:border-l-4 prose-blockquote:border-yellow-500 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-gray-700 prose-blockquote:bg-yellow-50/30 prose-blockquote:py-4 prose-blockquote:rounded-r-lg
+                        prose-strong:font-black prose-strong:text-green-900
                         prose-ul:list-disc prose-ul:pl-6 prose-li:mb-2
                         "
                         style={{ 
