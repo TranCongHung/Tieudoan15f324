@@ -1,4 +1,4 @@
-import { Article, Soldier, Question, Score, DocumentFile, User, QuizResult, MediaItem, Comment, Leader } from '../types';
+import { Article, Soldier, Question, Score, DocumentFile, User, QuizResult, MediaItem, Comment, Leader, SiteSettings, Milestone } from '../types';
 
 // Initial Mock Data
 const INITIAL_ARTICLES: Article[] = [
@@ -21,6 +21,112 @@ const INITIAL_ARTICLES: Article[] = [
     author: 'Phan Văn A'
   }
 ];
+
+const INITIAL_MILESTONES: Milestone[] = [
+    {
+      id: '1',
+      year: "1955",
+      title: "Thành lập Sư đoàn",
+      subtitle: "Khởi đầu hào hùng",
+      content: "Ngày 01/07/1955, Sư đoàn 324 được thành lập tại Tĩnh Gia, Thanh Hóa.",
+      image: "https://picsum.photos/600/400?random=50",
+      icon: "Flag",
+      story: `Ngày 1 tháng 7 năm 1955, tại vùng biển Tĩnh Gia (Thanh Hóa), Sư đoàn 324 được thành lập. Đây là Sư đoàn chủ lực cơ động đầu tiên của Quân khu 4, ra đời trong bối cảnh miền Bắc vừa được giải phóng, bắt tay vào công cuộc xây dựng CNXH, miền Nam tiếp tục cuộc đấu tranh thống nhất nước nhà.
+
+Ngay từ những ngày đầu thành lập, cán bộ, chiến sĩ Sư đoàn đã quán triệt sâu sắc nhiệm vụ chính trị, nhanh chóng ổn định tổ chức biên chế, bước vào huấn luyện quân sự, giáo dục chính trị với khí thế "Thao trường đổ mồ hôi, chiến trường bớt đổ máu".
+
+Hình ảnh người chiến sĩ Sư đoàn 324 những ngày đầu gian khó nhưng đầy lạc quan đã trở thành biểu tượng đẹp đẽ của tình quân dân cá nước trên mảnh đất Thanh Hóa anh hùng. Đơn vị đã giúp dân đắp đê, làm thủy lợi, khai hoang phục hóa, để lại ấn tượng sâu đậm trong lòng nhân dân.
+
+Tháng 6 năm 1961, Sư đoàn vinh dự được đón Bác Hồ về thăm. Lời Bác dạy: "Các chú phải ra sức học tập chính trị, quân sự, văn hóa để tiến bộ mãi..." đã trở thành kim chỉ nam cho mọi hành động của cán bộ, chiến sĩ Sư đoàn trong suốt chặng đường lịch sử.
+
+Những năm tháng đầu tiên ấy, dù thiếu thốn trăm bề về cơ sở vật chất, vũ khí trang bị còn thô sơ, nhưng với tinh thần đoàn kết, ý chí tự lực tự cường, Sư đoàn đã đặt những viên gạch vững chắc đầu tiên, xây dựng nền móng cho một đơn vị anh hùng sau này.`,
+      quiz: [
+        {
+            id: 'q1',
+            questionText: "Sư đoàn 324 được thành lập vào ngày tháng năm nào?",
+            options: ["01/07/1955", "22/12/1944", "19/08/1945", "03/02/1930"],
+            correctAnswerIndex: 0,
+            explanation: "Sư đoàn 324 được thành lập ngày 01/07/1955 tại Tĩnh Gia, Thanh Hóa."
+        },
+        {
+            id: 'q2',
+            questionText: "Địa điểm thành lập Sư đoàn 324 là ở đâu?",
+            options: ["Nghệ An", "Hà Tĩnh", "Thanh Hóa", "Quảng Bình"],
+            correctAnswerIndex: 2,
+            explanation: "Sư đoàn được thành lập tại vùng biển Tĩnh Gia, Thanh Hóa."
+        }
+      ]
+    },
+    {
+      id: '2',
+      year: "1967",
+      title: "Chiến trường Trị - Thiên",
+      subtitle: "Lửa thử vàng, gian nan thử sức",
+      content: "Tham gia các chiến dịch lớn tại Cồn Tiên, Dốc Miếu, đường 9 Nam Lào.",
+      image: "https://picsum.photos/600/400?random=51",
+      icon: "Map",
+      story: `Những năm tháng chiến đấu trên chiến trường Trị - Thiên khói lửa là quãng thời gian gian khổ nhất nhưng cũng vẻ vang nhất của Sư đoàn. Nơi đây được ví như "túi bom", "chảo lửa", nơi thử thách bản lĩnh và ý chí của người lính.
+
+Tại Cồn Tiên, Dốc Miếu, Đường 9, Khe Sanh... những cái tên đã đi vào lịch sử như những mốc son chói lọi. Đối mặt với kẻ thù được trang bị vũ khí tối tân, bom đạn cày xới nát từng tấc đất, nhưng với ý chí "Một tấc không đi, một ly không rời", cán bộ chiến sĩ Sư đoàn đã bám trụ kiên cường.
+
+Danh hiệu "Đoàn Ngự Bình" vang lên khiến quân thù khiếp sợ. Những trận đánh táo bạo, bất ngờ, những cách đánh sáng tạo như "vây lấn, tấn diệt" đã làm phá sản nhiều chiến thuật của địch, góp phần quan trọng vào thắng lợi chung của toàn mặt trận.`,
+       quiz: [
+        {
+            id: 'q3',
+            questionText: "Biệt danh nào thường được dùng để gọi Sư đoàn 324?",
+            options: ["Đoàn Sông Lam", "Đoàn Ngự Bình", "Đoàn Tây Nguyên", "Đoàn Đồng Bằng"],
+            correctAnswerIndex: 1,
+            explanation: "Danh hiệu 'Đoàn Ngự Bình' gắn liền với những chiến công vang dội tại chiến trường Trị - Thiên."
+        }
+      ]
+    },
+    {
+      id: '3',
+      year: "1975",
+      title: "Đại thắng Mùa Xuân",
+      subtitle: "Thần tốc - Táo bạo - Quyết thắng",
+      content: "Tham gia chiến dịch Huế - Đà Nẵng, thần tốc tiến quân giải phóng miền Nam.",
+      image: "https://picsum.photos/600/400?random=52",
+      icon: "Star",
+      story: `Mùa xuân năm 1975, thực hiện mệnh lệnh "Thần tốc, thần tốc hơn nữa, táo bạo, táo bạo hơn nữa", Sư đoàn 324 đã cùng các cánh quân khác ồ ạt tiến về phía Nam trong khí thế hào hùng của cả dân tộc ra trận.
+
+Tham gia chiến dịch Huế - Đà Nẵng, Sư đoàn đã đập tan tuyến phòng thủ kiên cố của địch ở phía Tây Nam Huế, cắt đứt đường rút lui của địch, góp phần quan trọng giải phóng Cố đô Huế và thành phố Đà Nẵng. Khí thế tiến công như vũ bão, quân đi đến đâu dân đón chào đến đó.
+
+Tiếp đà thắng lợi, Sư đoàn hành quân thần tốc vào Nam, tham gia Chiến dịch Hồ Chí Minh lịch sử. Vượt qua bao gian khổ, hy sinh, cán bộ chiến sĩ Sư đoàn đã có mặt tại sào huyệt cuối cùng của địch.`,
+      quiz: [
+        {
+            id: 'q4',
+            questionText: "Sư đoàn tham gia giải phóng thành phố nào trong chiến dịch Xuân 1975?",
+            options: ["Hà Nội", "Huế & Đà Nẵng", "Cần Thơ", "Hải Phòng"],
+            correctAnswerIndex: 1,
+            explanation: "Sư đoàn 324 đã góp phần quan trọng giải phóng Cố đô Huế và thành phố Đà Nẵng."
+        }
+      ]
+    },
+    {
+      id: '4',
+      year: "Nay",
+      title: "Xây dựng và Bảo vệ Tổ quốc",
+      subtitle: "Vững bước dưới quân kỳ",
+      content: "Xây dựng đơn vị vững mạnh toàn diện 'Mẫu mực, tiêu biểu'.",
+      image: "https://picsum.photos/600/400?random=53",
+      icon: "Award",
+      story: `Phát huy truyền thống vẻ vang, ngày nay Tiểu đoàn 15 và Sư đoàn 324 đang ra sức xây dựng đơn vị vững mạnh toàn diện "Mẫu mực, tiêu biểu". Nhiệm vụ bảo vệ Tổ quốc trong tình hình mới đặt ra những yêu cầu ngày càng cao.
+
+Công tác huấn luyện luôn bám sát phương châm "Cơ bản, thiết thực, vững chắc", coi trọng huấn luyện đồng bộ, chuyên sâu. Cán bộ chiến sĩ không ngừng học tập, rèn luyện làm chủ vũ khí trang bị kỹ thuật hiện đại, sẵn sàng chiến đấu cao.
+
+Bên cạnh đó, đơn vị luôn là lực lượng nòng cốt trong phòng chống thiên tai, cứu hộ cứu nạn. Hình ảnh cán bộ chiến sĩ Sư đoàn dầm mình trong mưa lũ giúp dân sơ tán, cứu tài sản đã tô thắm thêm phẩm chất "Bộ đội Cụ Hồ".`,
+       quiz: [
+        {
+            id: 'q5',
+            questionText: "Phương châm huấn luyện hiện nay của đơn vị là gì?",
+            options: ["Nhanh, mạnh, chính xác", "Cơ bản, thiết thực, vững chắc", "Đoàn kết, kỷ luật", "Trung thực, dũng cảm"],
+            correctAnswerIndex: 1,
+            explanation: "Phương châm: Cơ bản, thiết thực, vững chắc."
+        }
+      ]
+    }
+  ];
 
 const INITIAL_LEADERS: Leader[] = [
     {
@@ -234,6 +340,21 @@ const INITIAL_COMMENTS: Comment[] = [
     }
 ];
 
+const INITIAL_SETTINGS: SiteSettings = {
+    siteTitle: 'Tiểu đoàn 15',
+    siteSubtitle: 'Sư đoàn 324 - Quân Khu 4',
+    logoUrl: '', // Default to Shield icon
+    primaryColor: '#14532d', // green-900 (Tailwind defaults)
+    secondaryColor: '#eab308', // yellow-500
+    heroImage: 'https://picsum.photos/1920/1080?grayscale&blur=2',
+    heroTitle: 'Phát huy truyền thống Đoàn Ngự Bình',
+    heroSubtitle: 'Tiểu đoàn 15 quyết tâm hoàn thành xuất sắc mọi nhiệm vụ được giao, xứng danh Bộ đội Cụ Hồ thời kỳ mới.',
+    contactAddress: 'Quân khu 4, Nghệ An',
+    contactEmail: 'contact@su324.vn',
+    contactPhone: '069.xxxx.xxx',
+    customCss: ''
+};
+
 // Generic LocalStorage Helper
 const getFromStorage = <T,>(key: string, initial: T): T => {
   try {
@@ -310,5 +431,13 @@ export const storage = {
       const comments = getFromStorage<Comment[]>('comments', INITIAL_COMMENTS);
       comments.push(comment);
       saveToStorage('comments', comments);
-  }
+  },
+
+  // History
+  getHistory: () => getFromStorage<Milestone[]>('history', INITIAL_MILESTONES),
+  saveHistory: (data: Milestone[]) => saveToStorage('history', data),
+
+  // Site Settings
+  getSettings: () => getFromStorage<SiteSettings>('site_settings', INITIAL_SETTINGS),
+  saveSettings: (settings: SiteSettings) => saveToStorage('site_settings', settings),
 };

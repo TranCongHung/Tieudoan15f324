@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { storage } from '../services/storage';
 import { MediaItem } from '../types';
 import { Play, Music, Film, Calendar, X, Headphones } from 'lucide-react';
+import { useSiteSettings } from '../context/SiteContext';
 
 const Media: React.FC = () => {
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [activeTab, setActiveTab] = useState<'video' | 'audio'>('video');
   const [selectedVideo, setSelectedVideo] = useState<MediaItem | null>(null);
+  const { settings } = useSiteSettings();
 
   useEffect(() => {
     setMediaItems(storage.getMedia());
@@ -18,19 +20,19 @@ const Media: React.FC = () => {
   return (
     <div className="bg-stone-50 min-h-screen pb-12">
       {/* Hero Banner */}
-      <div className="relative h-80 bg-stone-900 overflow-hidden">
+      <div className="relative h-80 overflow-hidden" style={{ backgroundColor: settings.primaryColor }}>
         <div className="absolute inset-0">
           <img 
-            src="https://picsum.photos/1920/600?grayscale&blur=2&random=99" 
+            src={settings.heroImage || "https://picsum.photos/1920/600?grayscale&blur=2&random=99"} 
             className="w-full h-full object-cover opacity-50" 
             alt="Media Banner"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-900 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t to-transparent" style={{ '--tw-gradient-from': settings.primaryColor } as any}></div>
         </div>
         <div className="relative max-w-7xl mx-auto h-full flex flex-col justify-center px-4 sm:px-6 lg:px-8">
             <div className="flex items-center space-x-4 mb-4">
                 <div className="p-3 bg-yellow-500 rounded-full animate-pulse">
-                    <Film className="h-6 w-6 text-stone-900" />
+                    <Film className="h-6 w-6" style={{ color: settings.primaryColor }} />
                 </div>
                 <span className="text-yellow-400 font-bold tracking-widest uppercase">Thư viện số</span>
             </div>
@@ -38,7 +40,7 @@ const Media: React.FC = () => {
                 Truyền thông & Tư liệu
             </h1>
             <p className="mt-4 text-gray-300 max-w-2xl font-serif italic text-lg">
-                Lưu giữ những thước phim lịch sử, những bài ca đi cùng năm tháng của người lính Sư đoàn 324.
+                Lưu giữ những thước phim lịch sử, những bài ca đi cùng năm tháng của người lính {settings.siteTitle}.
             </p>
         </div>
       </div>
@@ -51,9 +53,10 @@ const Media: React.FC = () => {
                     onClick={() => setActiveTab('video')}
                     className={`py-4 px-6 flex items-center font-bold text-lg border-b-4 transition-all ${
                         activeTab === 'video' 
-                        ? 'border-yellow-500 text-green-900' 
+                        ? 'border-yellow-500' 
                         : 'border-transparent text-gray-500 hover:text-green-700'
                     }`}
+                    style={activeTab === 'video' ? { color: settings.primaryColor } : {}}
                 >
                     <Film className="w-5 h-5 mr-2" /> Video Hoạt động
                 </button>
@@ -61,9 +64,10 @@ const Media: React.FC = () => {
                     onClick={() => setActiveTab('audio')}
                     className={`py-4 px-6 flex items-center font-bold text-lg border-b-4 transition-all ${
                         activeTab === 'audio' 
-                        ? 'border-yellow-500 text-green-900' 
+                        ? 'border-yellow-500' 
                         : 'border-transparent text-gray-500 hover:text-green-700'
                     }`}
+                    style={activeTab === 'audio' ? { color: settings.primaryColor } : {}}
                 >
                     <Music className="w-5 h-5 mr-2" /> Âm thanh / Bài hát
                 </button>
@@ -129,9 +133,9 @@ const Media: React.FC = () => {
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {audios.map((audio) => (
-                            <div key={audio.id} className="bg-white rounded-xl p-6 shadow-md border-l-4 border-green-600 flex items-center space-x-6 hover:shadow-lg transition-shadow">
+                            <div key={audio.id} className="bg-white rounded-xl p-6 shadow-md border-l-4 flex items-center space-x-6 hover:shadow-lg transition-shadow" style={{ borderColor: settings.primaryColor }}>
                                 <div className="flex-shrink-0 w-20 h-20 bg-green-100 rounded-full flex items-center justify-center relative overflow-hidden group">
-                                    <Headphones className="w-10 h-10 text-green-700 relative z-10" />
+                                    <Headphones className="w-10 h-10 relative z-10" style={{ color: settings.primaryColor }} />
                                     <div className="absolute inset-0 bg-green-200 opacity-0 group-hover:opacity-100 transition-opacity animate-pulse"></div>
                                 </div>
                                 <div className="flex-grow">

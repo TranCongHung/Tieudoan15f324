@@ -2,28 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { Star, Map, Flag, Award, BookOpen, ChevronDown, X, Book, ChevronLeft, ChevronRight, HelpCircle, CheckCircle, XCircle, Lock, Save, ArrowLeft, Smartphone, RotateCw } from 'lucide-react';
 import { Link, useAuth } from '../context/AuthContext';
 import { storage } from '../services/storage';
-import { QuizResult } from '../types';
+import { QuizResult, Milestone } from '../types';
+import { useSiteSettings } from '../context/SiteContext';
 
-interface QuizQuestion {
-  question: string;
-  options: string[];
-  correctIndex: number;
-  explanation: string;
-}
-
-interface Milestone {
-  year: string;
-  title: string;
-  subtitle: string;
-  content: string;
-  image: string;
-  icon: any;
-  story: string;
-  quiz: QuizQuestion[];
-}
+// Icon mapping
+const ICON_MAP: Record<string, any> = {
+    Flag, Map, Star, Award
+};
 
 const History: React.FC = () => {
   const { user } = useAuth();
+  const { settings } = useSiteSettings();
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
   const [currentSpread, setCurrentSpread] = useState(0); // 0 = Cover + Page 1, 1 = Page 2 + Page 3, etc.
   
@@ -32,6 +22,10 @@ const History: React.FC = () => {
   const [userAnswers, setUserAnswers] = useState<(number | null)[]>([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+
+  useEffect(() => {
+      setMilestones(storage.getHistory());
+  }, []);
 
   // Reset khi mở cuốn sách mới
   useEffect(() => {
@@ -48,163 +42,17 @@ const History: React.FC = () => {
     setUserAnswers([]);
   };
 
-  // Chia nhỏ văn bản thành các trang
-  const getPages = (text: string) => {
-    return text.split('\n').filter(p => p.trim() !== '');
+  // Chia nhỏ văn bản thành các trang dựa trên thẻ HR
+  const getPages = (html: string) => {
+    if (!html) return [];
+    // Split by <hr> tag (case insensitive, allowing attributes)
+    // Using positive lookahead/behind or just simple split
+    const pages = html.split(/<hr\s*\/?>/i);
+    return pages.filter(p => p.trim() !== '');
   };
 
-  const milestones: Milestone[] = [
-    {
-      year: "1955",
-      title: "Thành lập Sư đoàn",
-      subtitle: "Khởi đầu hào hùng",
-      content: "Ngày 01/07/1955, Sư đoàn 324 được thành lập tại Tĩnh Gia, Thanh Hóa.",
-      image: "https://picsum.photos/600/400?random=50",
-      icon: Flag,
-      story: `Ngày 1 tháng 7 năm 1955, tại vùng biển Tĩnh Gia (Thanh Hóa), Sư đoàn 324 được thành lập. Đây là Sư đoàn chủ lực cơ động đầu tiên của Quân khu 4, ra đời trong bối cảnh miền Bắc vừa được giải phóng, bắt tay vào công cuộc xây dựng CNXH, miền Nam tiếp tục cuộc đấu tranh thống nhất nước nhà.
-
-Ngay từ những ngày đầu thành lập, cán bộ, chiến sĩ Sư đoàn đã quán triệt sâu sắc nhiệm vụ chính trị, nhanh chóng ổn định tổ chức biên chế, bước vào huấn luyện quân sự, giáo dục chính trị với khí thế "Thao trường đổ mồ hôi, chiến trường bớt đổ máu".
-
-Hình ảnh người chiến sĩ Sư đoàn 324 những ngày đầu gian khó nhưng đầy lạc quan đã trở thành biểu tượng đẹp đẽ của tình quân dân cá nước trên mảnh đất Thanh Hóa anh hùng. Đơn vị đã giúp dân đắp đê, làm thủy lợi, khai hoang phục hóa, để lại ấn tượng sâu đậm trong lòng nhân dân.
-
-Tháng 6 năm 1961, Sư đoàn vinh dự được đón Bác Hồ về thăm. Lời Bác dạy: "Các chú phải ra sức học tập chính trị, quân sự, văn hóa để tiến bộ mãi..." đã trở thành kim chỉ nam cho mọi hành động của cán bộ, chiến sĩ Sư đoàn trong suốt chặng đường lịch sử.
-
-Những năm tháng đầu tiên ấy, dù thiếu thốn trăm bề về cơ sở vật chất, vũ khí trang bị còn thô sơ, nhưng với tinh thần đoàn kết, ý chí tự lực tự cường, Sư đoàn đã đặt những viên gạch vững chắc đầu tiên, xây dựng nền móng cho một đơn vị anh hùng sau này.`,
-      quiz: [
-        {
-            question: "Sư đoàn 324 được thành lập vào ngày tháng năm nào?",
-            options: ["01/07/1955", "22/12/1944", "19/08/1945", "03/02/1930"],
-            correctIndex: 0,
-            explanation: "Sư đoàn 324 được thành lập ngày 01/07/1955 tại Tĩnh Gia, Thanh Hóa."
-        },
-        {
-            question: "Địa điểm thành lập Sư đoàn 324 là ở đâu?",
-            options: ["Nghệ An", "Hà Tĩnh", "Thanh Hóa", "Quảng Bình"],
-            correctIndex: 2,
-            explanation: "Sư đoàn được thành lập tại vùng biển Tĩnh Gia, Thanh Hóa."
-        },
-        {
-            question: "Lời Bác Hồ dạy khi về thăm Sư đoàn năm 1961 là gì?",
-            options: [
-                "Trung với Đảng, hiếu với dân", 
-                "Các chú phải ra sức học tập chính trị, quân sự, văn hóa để tiến bộ mãi", 
-                "Quyết chiến quyết thắng",
-                "Đoàn kết, kỷ luật, quyết thắng"
-            ],
-            correctIndex: 1,
-            explanation: "Bác dạy: 'Các chú phải ra sức học tập chính trị, quân sự, văn hóa để tiến bộ mãi...'"
-        }
-      ]
-    },
-    {
-      year: "1967",
-      title: "Chiến trường Trị - Thiên",
-      subtitle: "Lửa thử vàng, gian nan thử sức",
-      content: "Tham gia các chiến dịch lớn tại Cồn Tiên, Dốc Miếu, đường 9 Nam Lào.",
-      image: "https://picsum.photos/600/400?random=51",
-      icon: Map,
-      story: `Những năm tháng chiến đấu trên chiến trường Trị - Thiên khói lửa là quãng thời gian gian khổ nhất nhưng cũng vẻ vang nhất của Sư đoàn. Nơi đây được ví như "túi bom", "chảo lửa", nơi thử thách bản lĩnh và ý chí của người lính.
-
-Tại Cồn Tiên, Dốc Miếu, Đường 9, Khe Sanh... những cái tên đã đi vào lịch sử như những mốc son chói lọi. Đối mặt với kẻ thù được trang bị vũ khí tối tân, bom đạn cày xới nát từng tấc đất, nhưng với ý chí "Một tấc không đi, một ly không rời", cán bộ chiến sĩ Sư đoàn đã bám trụ kiên cường.
-
-Danh hiệu "Đoàn Ngự Bình" vang lên khiến quân thù khiếp sợ. Những trận đánh táo bạo, bất ngờ, những cách đánh sáng tạo như "vây lấn, tấn diệt" đã làm phá sản nhiều chiến thuật của địch, góp phần quan trọng vào thắng lợi chung của toàn mặt trận.
-
-Trong chiến dịch Đường 9 - Nam Lào, Sư đoàn đã phối hợp chặt chẽ với các đơn vị bạn, đập tan cuộc hành quân Lam Sơn 719 của địch, bảo vệ vững chắc tuyến hành lang vận tải chiến lược Bắc - Nam. Những chiến công ấy đã được đổi bằng xương máu của biết bao anh hùng liệt sĩ.
-
-Không chỉ chiến đấu giỏi, Sư đoàn còn làm tốt công tác dân vận, giúp đỡ nhân dân vùng giải phóng ổn định cuộc sống, xây dựng chính quyền cách mạng, được nhân dân tin yêu, che chở, đùm bọc.`,
-       quiz: [
-        {
-            question: "Biệt danh nào thường được dùng để gọi Sư đoàn 324?",
-            options: ["Đoàn Sông Lam", "Đoàn Ngự Bình", "Đoàn Tây Nguyên", "Đoàn Đồng Bằng"],
-            correctIndex: 1,
-            explanation: "Danh hiệu 'Đoàn Ngự Bình' gắn liền với những chiến công vang dội tại chiến trường Trị - Thiên."
-        },
-        {
-            question: "Chiến thuật nổi tiếng nào được nhắc đến trong giai đoạn này?",
-            options: ["Nở hoa trong lòng địch", "Vây lấn, tấn diệt", "Đánh điểm, diệt viện", "Du kích chiến"],
-            correctIndex: 1,
-            explanation: "Cách đánh sáng tạo 'vây lấn, tấn diệt' đã làm phá sản nhiều chiến thuật của địch."
-        },
-        {
-            question: "Chiến dịch nào đập tan cuộc hành quân Lam Sơn 719?",
-            options: ["Chiến dịch Điện Biên Phủ", "Chiến dịch Đường 9 - Nam Lào", "Chiến dịch Tây Nguyên", "Chiến dịch Huế - Đà Nẵng"],
-            correctIndex: 1,
-            explanation: "Chiến thắng Đường 9 - Nam Lào đã bảo vệ vững chắc tuyến hành lang vận tải chiến lược."
-        }
-      ]
-    },
-    {
-      year: "1975",
-      title: "Đại thắng Mùa Xuân",
-      subtitle: "Thần tốc - Táo bạo - Quyết thắng",
-      content: "Tham gia chiến dịch Huế - Đà Nẵng, thần tốc tiến quân giải phóng miền Nam.",
-      image: "https://picsum.photos/600/400?random=52",
-      icon: Star,
-      story: `Mùa xuân năm 1975, thực hiện mệnh lệnh "Thần tốc, thần tốc hơn nữa, táo bạo, táo bạo hơn nữa", Sư đoàn 324 đã cùng các cánh quân khác ồ ạt tiến về phía Nam trong khí thế hào hùng của cả dân tộc ra trận.
-
-Tham gia chiến dịch Huế - Đà Nẵng, Sư đoàn đã đập tan tuyến phòng thủ kiên cố của địch ở phía Tây Nam Huế, cắt đứt đường rút lui của địch, góp phần quan trọng giải phóng Cố đô Huế và thành phố Đà Nẵng. Khí thế tiến công như vũ bão, quân đi đến đâu dân đón chào đến đó.
-
-Tiếp đà thắng lợi, Sư đoàn hành quân thần tốc vào Nam, tham gia Chiến dịch Hồ Chí Minh lịch sử. Vượt qua bao gian khổ, hy sinh, cán bộ chiến sĩ Sư đoàn đã có mặt tại sào huyệt cuối cùng của địch.
-
-Ngày 30/4/1975 lịch sử, lá cờ Quyết thắng của Sư đoàn tung bay trên các căn cứ địch, hòa chung niềm vui vỡ òa của cả dân tộc trong ngày non sông thu về một mối. Đó là kết quả của 20 năm chiến đấu, hy sinh gian khổ nhưng vô cùng vẻ vang.
-
-Chiến thắng 30/4 là mốc son chói lọi nhất trong lịch sử Sư đoàn, khẳng định sức mạnh bách chiến bách thắng của Quân đội nhân dân Việt Nam, và là niềm tự hào to lớn của các thế hệ cán bộ, chiến sĩ Sư đoàn 324.`,
-      quiz: [
-        {
-            question: "Sư đoàn tham gia giải phóng thành phố nào trong chiến dịch Xuân 1975?",
-            options: ["Hà Nội", "Huế & Đà Nẵng", "Cần Thơ", "Hải Phòng"],
-            correctIndex: 1,
-            explanation: "Sư đoàn 324 đã góp phần quan trọng giải phóng Cố đô Huế và thành phố Đà Nẵng."
-        },
-         {
-            question: "Phương châm tác chiến trong chiến dịch Hồ Chí Minh là gì?",
-            options: ["Chắc thắng mới đánh", "Thần tốc, táo bạo", "Đánh nhanh thắng nhanh", "Phòng ngự chặt"],
-            correctIndex: 1,
-            explanation: "Mệnh lệnh nổi tiếng: 'Thần tốc, thần tốc hơn nữa, táo bạo, táo bạo hơn nữa'."
-        },
-        {
-            question: "Sư đoàn hoàn thành nhiệm vụ giải phóng miền Nam vào ngày nào?",
-            options: ["07/05/1954", "30/04/1975", "02/09/1945", "19/05/1890"],
-            correctIndex: 1,
-            explanation: "Ngày 30/4/1975, miền Nam hoàn toàn giải phóng."
-        }
-      ]
-    },
-    {
-      year: "Nay",
-      title: "Xây dựng và Bảo vệ Tổ quốc",
-      subtitle: "Vững bước dưới quân kỳ",
-      content: "Xây dựng đơn vị vững mạnh toàn diện 'Mẫu mực, tiêu biểu'.",
-      image: "https://picsum.photos/600/400?random=53",
-      icon: Award,
-      story: `Phát huy truyền thống vẻ vang, ngày nay Tiểu đoàn 15 và Sư đoàn 324 đang ra sức xây dựng đơn vị vững mạnh toàn diện "Mẫu mực, tiêu biểu". Nhiệm vụ bảo vệ Tổ quốc trong tình hình mới đặt ra những yêu cầu ngày càng cao.
-
-Công tác huấn luyện luôn bám sát phương châm "Cơ bản, thiết thực, vững chắc", coi trọng huấn luyện đồng bộ, chuyên sâu. Cán bộ chiến sĩ không ngừng học tập, rèn luyện làm chủ vũ khí trang bị kỹ thuật hiện đại, sẵn sàng chiến đấu cao.
-
-Bên cạnh đó, đơn vị luôn là lực lượng nòng cốt trong phòng chống thiên tai, cứu hộ cứu nạn. Hình ảnh cán bộ chiến sĩ Sư đoàn dầm mình trong mưa lũ giúp dân sơ tán, cứu tài sản đã tô thắm thêm phẩm chất "Bộ đội Cụ Hồ".
-
-Đơn vị cũng tích cực tham gia phong trào "Quân đội chung sức xây dựng nông thôn mới", giúp đỡ nhân dân địa phương xóa đói giảm nghèo, xây dựng đời sống văn hóa, thắt chặt tình đoàn kết quân dân.
-
-Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, viết tiếp những trang sử vàng truyền thống, xứng đáng với niềm tin yêu của Đảng, Nhà nước và Nhân dân, xứng danh là "Quả đấm thép" của Quân khu 4.`,
-       quiz: [
-        {
-            question: "Phương châm huấn luyện hiện nay của đơn vị là gì?",
-            options: ["Nhanh, mạnh, chính xác", "Cơ bản, thiết thực, vững chắc", "Đoàn kết, kỷ luật", "Trung thực, dũng cảm"],
-            correctIndex: 1,
-            explanation: "Phương châm: Cơ bản, thiết thực, vững chắc."
-        },
-        {
-             question: "Mục tiêu xây dựng đơn vị hiện nay là gì?",
-             options: ["Mạnh về gạo, bạo về tiền", "Mẫu mực, tiêu biểu", "Đông vui, nhộn nhịp", "Hiện đại hóa hoàn toàn"],
-             correctIndex: 1,
-             explanation: "Xây dựng đơn vị vững mạnh toàn diện 'Mẫu mực, tiêu biểu'."
-        }
-      ]
-    }
-  ];
-
   // Logic phân trang
-  // textPages là mảng các đoạn văn
+  // textPages là mảng các trang HTML
   const textPages = selectedMilestone ? getPages(selectedMilestone.story) : [];
   
   const contentSpreadsCount = Math.ceil(textPages.length / 2); 
@@ -224,6 +72,10 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
           return;
       }
       if (selectedMilestone) {
+        if (!selectedMilestone.quiz || selectedMilestone.quiz.length === 0) {
+            alert("Nội dung này chưa có câu hỏi kiểm tra.");
+            return;
+        }
         setQuizMode(true);
         setUserAnswers(new Array(selectedMilestone.quiz.length).fill(null));
         setIsSubmitted(false);
@@ -242,7 +94,7 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
       if (!selectedMilestone || !user) return;
       let calculatedScore = 0;
       selectedMilestone.quiz.forEach((q, idx) => {
-          if (userAnswers[idx] === q.correctIndex) calculatedScore++;
+          if (userAnswers[idx] === q.correctAnswerIndex) calculatedScore++;
       });
       setScore(calculatedScore);
       setIsSubmitted(true);
@@ -296,11 +148,10 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
       }
 
       return (
-        <div className="prose prose-stone prose-lg max-w-none font-serif text-justify-pretty leading-loose text-stone-800 animate-fade-in pt-4 md:pt-8 h-full flex items-center">
-            <p className="indent-8 drop-cap text-base md:text-lg">
-                {text}
-            </p>
-        </div>
+        <div 
+            className="prose prose-stone prose-lg max-w-none font-serif text-justify-pretty leading-loose text-stone-800 animate-fade-in pt-4 md:pt-8 h-full flex flex-col justify-center"
+            dangerouslySetInnerHTML={{ __html: text }}
+        />
       );
   };
 
@@ -310,12 +161,12 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
       // SPREAD 0: BÌA PHẢI (Trang đầu tiên của nội dung)
       if (currentSpread === 0) {
            const text = textPages[0];
+           if (!text) return null;
            return (
-            <div className="prose prose-stone prose-lg max-w-none font-serif text-justify-pretty leading-loose text-stone-800 animate-fade-in pt-4 md:pt-8 h-full flex items-center">
-                <p className="indent-8 drop-cap text-base md:text-lg">
-                    {text}
-                </p>
-            </div>
+            <div 
+                className="prose prose-stone prose-lg max-w-none font-serif text-justify-pretty leading-loose text-stone-800 animate-fade-in pt-4 md:pt-8 h-full flex flex-col justify-center"
+                dangerouslySetInnerHTML={{ __html: text }}
+            />
            );
       }
 
@@ -337,6 +188,7 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
                         <button 
                             onClick={startQuiz}
                             className="group relative inline-flex items-center justify-center px-8 py-3 font-serif font-bold text-white transition-all duration-200 bg-green-900 rounded shadow-lg hover:bg-green-800 hover:scale-105 uppercase tracking-wider text-sm"
+                            style={{ backgroundColor: settings.primaryColor }}
                         >
                             <span>Làm bài thi</span>
                             <HelpCircle className="w-4 h-4 ml-2 group-hover:rotate-12 transition-transform"/>
@@ -357,11 +209,10 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
       }
 
       return (
-        <div className="prose prose-stone prose-lg max-w-none font-serif text-justify-pretty leading-loose text-stone-800 animate-fade-in pt-4 md:pt-8 h-full flex items-center">
-            <p className="indent-8 text-base md:text-lg">
-                {text}
-            </p>
-        </div>
+        <div 
+            className="prose prose-stone prose-lg max-w-none font-serif text-justify-pretty leading-loose text-stone-800 animate-fade-in pt-4 md:pt-8 h-full flex flex-col justify-center"
+            dangerouslySetInnerHTML={{ __html: text }}
+        />
       );
   };
 
@@ -370,12 +221,12 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
        {/* Cinematic Hero */}
        <div className="relative h-[50vh] md:h-[60vh] flex items-center justify-center overflow-hidden">
            <div className="absolute inset-0">
-               <img src="https://picsum.photos/1920/1080?grayscale&blur=2" alt="History background" className="w-full h-full object-cover" />
-               <div className="absolute inset-0 bg-gradient-to-b from-green-900/90 via-green-900/80 to-[#fdfbf7]"></div>
+               <img src={settings.heroImage || "https://picsum.photos/1920/1080?grayscale&blur=2"} alt="History background" className="w-full h-full object-cover" />
+               <div className="absolute inset-0 bg-gradient-to-b opacity-90" style={{ background: `linear-gradient(to bottom, ${settings.primaryColor}E6, ${settings.primaryColor}CC, #fdfbf7)` }}></div>
            </div>
            
            <div className="relative z-10 text-center px-4 max-w-4xl mx-auto animate-fade-in-up">
-               <div className="w-16 md:w-24 h-1 md:h-1.5 bg-yellow-500 mx-auto mb-4 md:mb-8 shadow-[0_0_15px_rgba(179,156,77,0.6)]"></div>
+               <div className="w-16 md:w-24 h-1 md:h-1.5 mx-auto mb-4 md:mb-8 shadow-[0_0_15px_rgba(179,156,77,0.6)]" style={{ backgroundColor: settings.secondaryColor }}></div>
                <h1 className="text-4xl md:text-9xl font-display font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-200 uppercase mb-4 md:mb-8 drop-shadow-sm tracking-tighter">
                    Hào Khí <br/> Sông Lam
                </h1>
@@ -384,7 +235,7 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
                </p>
                
                <div className="mt-8 md:mt-16 animate-bounce-slow">
-                 <ChevronDown className="h-8 w-8 md:h-10 md:w-10 text-yellow-500 mx-auto opacity-80" />
+                 <ChevronDown className="h-8 w-8 md:h-10 md:w-10 mx-auto opacity-80" style={{ color: settings.secondaryColor }} />
                </div>
            </div>
        </div>
@@ -392,7 +243,7 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
        {/* Timeline Section */}
        <div className="max-w-6xl mx-auto px-4 py-12 md:py-24 overflow-hidden">
           <div className="relative space-y-16 md:space-y-32">
-              <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-gradient-to-b from-green-800 via-yellow-500 to-green-800 shadow-[0_0_10px_rgba(0,0,0,0.2)]"></div>
+              <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-gradient-to-b from-transparent via-yellow-500 to-transparent shadow-[0_0_10px_rgba(0,0,0,0.2)]" style={{ '--tw-gradient-from': settings.primaryColor, '--tw-gradient-to': settings.primaryColor } as any}></div>
                 {milestones.map((item, index) => (
                    <div key={index} className={`flex flex-col md:flex-row items-center group relative ${index % 2 === 0 ? '' : 'md:flex-row-reverse'}`}>
                       <div className="w-full md:w-5/12 cursor-pointer" onClick={() => setSelectedMilestone(item)}>
@@ -403,11 +254,11 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
                                   </div>
                               </div>
                               <div className="h-56 md:h-64 overflow-hidden relative">
-                                  <div className="absolute inset-0 bg-gradient-to-t from-green-900/90 to-transparent z-10"></div>
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent z-10"></div>
                                   <img src={item.image} alt={item.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
                                   <div className={`absolute bottom-6 z-20 px-8 w-full ${index % 2 === 0 ? 'md:right-0' : 'md:left-0'}`}>
                                       <h3 className="text-white font-display font-bold text-2xl md:text-3xl uppercase tracking-wider drop-shadow-lg mb-2">{item.title}</h3>
-                                      <div className={`h-1 bg-yellow-500 w-16 mb-2 mx-auto ${index % 2 === 0 ? 'md:ml-auto md:mr-0' : 'md:mr-auto md:ml-0'}`}></div>
+                                      <div className={`h-1 w-16 mb-2 mx-auto ${index % 2 === 0 ? 'md:ml-auto md:mr-0' : 'md:mr-auto md:ml-0'}`} style={{ backgroundColor: settings.secondaryColor }}></div>
                                   </div>
                               </div>
                               <div className="p-6 md:p-8 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')] bg-[#fdfbf7]">
@@ -416,7 +267,7 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
                           </div>
                       </div>
                       <div className="flex md:absolute left-1/2 transform -translate-y-1/2 md:-translate-y-0 md:-translate-x-1/2 flex-col items-center justify-center z-10 my-6 md:my-0 md:mt-0 pointer-events-none">
-                          <div className="w-16 h-16 md:w-24 md:h-24 bg-green-900 rounded-full border-4 border-yellow-500 shadow-xl flex items-center justify-center relative z-20">
+                          <div className="w-16 h-16 md:w-24 md:h-24 rounded-full border-4 shadow-xl flex items-center justify-center relative z-20" style={{ backgroundColor: settings.primaryColor, borderColor: settings.secondaryColor }}>
                              <span className="text-white font-display font-black text-lg md:text-2xl tracking-tighter">{item.year}</span>
                           </div>
                       </div>
@@ -483,17 +334,17 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
                             <div className="max-w-4xl mx-auto w-full space-y-8 pb-20">
                                 {selectedMilestone.quiz.map((q, qIdx) => {
                                     const userAnswer = userAnswers[qIdx];
-                                    const isCorrect = userAnswer === q.correctIndex;
+                                    const isCorrect = userAnswer === q.correctAnswerIndex;
                                     return (
                                         <div key={qIdx} className={`p-4 md:p-8 rounded-xl border-2 shadow-sm transition-all ${isSubmitted ? (isCorrect ? 'border-green-300 bg-green-50/50' : 'border-red-300 bg-red-50/50') : 'border-stone-200 bg-white'}`}>
                                             <p className="font-bold text-stone-900 text-lg md:text-xl mb-4 md:mb-6 flex font-serif">
-                                                <span className="mr-3 text-green-900 bg-green-100 px-3 py-1 rounded text-sm font-sans flex items-center h-fit mt-1">Câu {qIdx + 1}</span> {q.question}
+                                                <span className="mr-3 text-green-900 bg-green-100 px-3 py-1 rounded text-sm font-sans flex items-center h-fit mt-1">Câu {qIdx + 1}</span> {q.questionText}
                                             </p>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 {q.options.map((opt, oIdx) => {
                                                     let optClass = "w-full text-left p-3 md:p-4 rounded-lg border-2 flex items-center transition-all ";
                                                     if (isSubmitted) {
-                                                        if (oIdx === q.correctIndex) optClass += "bg-green-100 border-green-500 text-green-900 font-bold shadow-md scale-[1.01]";
+                                                        if (oIdx === q.correctAnswerIndex) optClass += "bg-green-100 border-green-500 text-green-900 font-bold shadow-md scale-[1.01]";
                                                         else if (oIdx === userAnswer && !isCorrect) optClass += "bg-red-50 border-red-400 text-red-900 opacity-80";
                                                         else optClass += "opacity-40 border-gray-100 grayscale";
                                                     } else {
@@ -504,7 +355,7 @@ Thế hệ cán bộ, chiến sĩ hôm nay nguyện tiếp bước cha anh, vi�
                                                         <button key={oIdx} onClick={() => handleSelectOption(qIdx, oIdx)} disabled={isSubmitted} className={optClass}>
                                                             <span className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center mr-4 text-sm font-bold flex-shrink-0 bg-white/50">{String.fromCharCode(65 + oIdx)}</span>
                                                             <span className="text-base md:text-lg">{opt}</span>
-                                                            {isSubmitted && oIdx === q.correctIndex && <CheckCircle className="ml-auto w-6 h-6 text-green-700"/>}
+                                                            {isSubmitted && oIdx === q.correctAnswerIndex && <CheckCircle className="ml-auto w-6 h-6 text-green-700"/>}
                                                             {isSubmitted && oIdx === userAnswer && !isCorrect && <XCircle className="ml-auto w-6 h-6 text-red-700"/>}
                                                         </button>
                                                     )

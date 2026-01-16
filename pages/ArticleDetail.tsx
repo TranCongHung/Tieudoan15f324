@@ -3,11 +3,13 @@ import { storage } from '../services/storage';
 import { Article, Comment } from '../types';
 import { Calendar, User, ArrowLeft, Clock, Share2, Printer, Tag, MessageSquare, Send, LogIn } from 'lucide-react';
 import { useAuth, useParams, Link, useNavigate } from '../context/AuthContext';
+import { useSiteSettings } from '../context/SiteContext';
 
 const ArticleDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { settings } = useSiteSettings();
   
   const [article, setArticle] = useState<Article | null>(null);
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
@@ -59,7 +61,7 @@ const ArticleDetail: React.FC = () => {
   if (loading) {
       return (
           <div className="min-h-screen bg-[#fdfbf7] flex items-center justify-center">
-              <div className="w-12 h-12 border-4 border-green-200 border-t-green-800 rounded-full animate-spin"></div>
+              <div className="w-12 h-12 border-4 border-green-200 rounded-full animate-spin" style={{ borderTopColor: settings.primaryColor }}></div>
           </div>
       );
   }
@@ -71,7 +73,8 @@ const ArticleDetail: React.FC = () => {
         <p className="text-gray-600 mb-8 font-serif">Bài viết này có thể đã bị xóa hoặc đường dẫn không tồn tại.</p>
         <button 
             onClick={() => navigate('/')}
-            className="px-6 py-3 bg-green-700 text-white rounded-lg font-bold hover:bg-green-800 transition-colors flex items-center shadow-md"
+            className="px-6 py-3 text-white rounded-lg font-bold hover:bg-green-800 transition-colors flex items-center shadow-md"
+            style={{ backgroundColor: settings.primaryColor }}
         >
             <ArrowLeft className="w-5 h-5 mr-2" /> Quay về trang chủ
         </button>
@@ -103,7 +106,7 @@ const ArticleDetail: React.FC = () => {
                     {/* Header Section */}
                     <div className="text-center mb-10">
                         <div className="flex items-center justify-center space-x-3 text-xs md:text-sm text-gray-500 mb-6 font-bold uppercase tracking-widest">
-                             <span className="text-green-700 bg-green-50 px-3 py-1 rounded">Tin tức</span>
+                             <span className="bg-green-50 px-3 py-1 rounded" style={{ color: settings.primaryColor }}>Tin tức</span>
                              <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                              <span className="flex items-center"><Calendar className="w-3 h-3 mr-1 text-yellow-600"/> {article.date}</span>
                         </div>
@@ -114,13 +117,21 @@ const ArticleDetail: React.FC = () => {
                         </h1>
                         
                         <div className="flex items-center justify-center text-sm text-gray-500 font-medium italic font-serif">
-                            <span className="flex items-center">Bởi <User className="w-4 h-4 mx-1 text-green-700"/> <span className="text-green-800 font-bold not-italic">{article.author}</span></span>
+                            <span className="flex items-center">Bởi <User className="w-4 h-4 mx-1" style={{ color: settings.primaryColor }}/> <span className="font-bold not-italic" style={{ color: settings.primaryColor }}>{article.author}</span></span>
                         </div>
                     </div>
 
                     {/* Summary (Sapo) */}
-                    <div className="text-lg md:text-xl font-serif text-gray-700 leading-relaxed font-medium mb-10 text-justify-pretty border-t border-b border-gray-100 py-8 first-letter:text-5xl first-letter:float-left first-letter:mr-3 first-letter:text-green-800 first-letter:font-display first-letter:font-black">
-                        {article.summary}
+                    <div 
+                        className="text-lg md:text-xl font-serif text-gray-700 leading-relaxed font-medium mb-10 text-justify-pretty border-t border-b border-gray-100 py-8 first-letter:text-5xl first-letter:float-left first-letter:mr-3 first-letter:font-display first-letter:font-black"
+                        style={{ '--tw-first-letter-color': settings.primaryColor } as any}
+                    >
+                        <style>{`
+                            .first-letter-dynamic::first-letter {
+                                color: ${settings.primaryColor};
+                            }
+                        `}</style>
+                        <div className="first-letter-dynamic">{article.summary}</div>
                     </div>
 
                     {/* Featured Image */}
@@ -139,20 +150,25 @@ const ArticleDetail: React.FC = () => {
                     <div 
                         className="prose prose-lg md:prose-xl prose-stone max-w-none font-serif text-gray-800 
                         prose-p:text-justify-pretty prose-p:leading-8 prose-p:mb-6
-                        prose-headings:font-display prose-headings:font-bold prose-headings:text-green-900 prose-headings:mt-10 prose-headings:mb-6
-                        prose-a:text-green-700 prose-a:font-bold prose-a:no-underline hover:prose-a:text-green-900 hover:prose-a:underline
+                        prose-headings:font-display prose-headings:font-bold prose-headings:mt-10 prose-headings:mb-6
+                        prose-a:font-bold prose-a:no-underline hover:prose-a:underline
                         prose-img:rounded-lg prose-img:shadow-md prose-img:my-8
                         prose-blockquote:border-l-4 prose-blockquote:border-yellow-500 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-gray-700 prose-blockquote:bg-yellow-50/30 prose-blockquote:py-2
-                        prose-strong:text-green-900 prose-strong:font-black
+                        prose-strong:font-black
                         prose-ul:list-disc prose-ul:pl-6 prose-li:mb-2
                         "
+                        style={{ 
+                            '--tw-prose-headings': settings.primaryColor,
+                            '--tw-prose-links': settings.primaryColor,
+                            '--tw-prose-bold': settings.primaryColor
+                        } as any}
                         dangerouslySetInnerHTML={{ __html: article.content }} 
                     />
 
                     {/* Tags / Footer */}
                     <div className="mt-16 pt-8 border-t border-gray-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                         <div className="flex flex-wrap gap-2">
-                            <Tag className="w-4 h-4 text-green-700 mt-1" />
+                            <Tag className="w-4 h-4 mt-1" style={{ color: settings.primaryColor }} />
                             {['Quân sự', 'Tiểu đoàn 15', 'Huấn luyện', 'Sư đoàn 324'].map(tag => (
                                 <span key={tag} className="px-3 py-1 bg-gray-100 hover:bg-green-100 text-gray-600 hover:text-green-800 rounded text-xs font-bold uppercase tracking-wide cursor-pointer transition-colors">
                                     {tag}
@@ -160,7 +176,7 @@ const ArticleDetail: React.FC = () => {
                             ))}
                         </div>
                         <div className="text-gray-400 italic font-serif text-sm">
-                            &copy; Bản quyền thuộc về Tiểu đoàn 15
+                            &copy; Bản quyền thuộc về {settings.siteTitle}
                         </div>
                     </div>
                 </article>
@@ -168,7 +184,7 @@ const ArticleDetail: React.FC = () => {
                 {/* --- COMMENT SECTION --- */}
                 <div className="mt-12">
                     <div className="flex items-center space-x-3 mb-8">
-                        <MessageSquare className="w-6 h-6 text-green-800" />
+                        <MessageSquare className="w-6 h-6" style={{ color: settings.primaryColor }} />
                         <h3 className="font-display font-bold text-2xl text-green-900">Bình luận ({comments.length})</h3>
                     </div>
 
@@ -176,7 +192,7 @@ const ArticleDetail: React.FC = () => {
                         {/* Comment Form */}
                         {user ? (
                             <form onSubmit={handleCommentSubmit} className="mb-12 flex gap-4">
-                                <div className="flex-shrink-0 w-12 h-12 bg-green-900 rounded-full flex items-center justify-center font-bold text-white shadow-md">
+                                <div className="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-md" style={{ backgroundColor: settings.primaryColor }}>
                                     {user.name.charAt(0)}
                                 </div>
                                 <div className="flex-grow relative">
@@ -191,7 +207,8 @@ const ArticleDetail: React.FC = () => {
                                     <button 
                                         type="submit" 
                                         disabled={!commentText.trim()}
-                                        className="absolute bottom-3 right-3 p-2 bg-green-700 text-white rounded-md hover:bg-green-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                        className="absolute bottom-3 right-3 p-2 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                                        style={{ backgroundColor: settings.primaryColor }}
                                         title="Gửi"
                                     >
                                         <Send className="w-4 h-4" />
@@ -201,7 +218,7 @@ const ArticleDetail: React.FC = () => {
                         ) : (
                              <div className="mb-10 bg-yellow-50 border border-yellow-100 rounded-lg p-8 text-center">
                                  <p className="text-gray-800 mb-4 font-serif">Vui lòng đăng nhập để tham gia thảo luận cùng đơn vị.</p>
-                                 <Link to="/login" className="inline-flex items-center px-6 py-2.5 bg-green-700 text-white rounded font-bold hover:bg-green-800 transition-colors shadow-lg hover:-translate-y-0.5 transform">
+                                 <Link to="/login" className="inline-flex items-center px-6 py-2.5 text-white rounded font-bold transition-colors shadow-lg hover:-translate-y-0.5 transform" style={{ backgroundColor: settings.primaryColor }}>
                                      <LogIn className="w-4 h-4 mr-2"/> Đăng nhập ngay
                                  </Link>
                              </div>
@@ -246,7 +263,7 @@ const ArticleDetail: React.FC = () => {
             <div className="w-full lg:w-1/4 space-y-10">
                 {/* Related News Widget */}
                 <div className="sticky top-40">
-                    <h3 className="text-lg font-bold font-display text-green-900 mb-6 pb-2 border-b-2 border-yellow-500 inline-block uppercase tracking-wider">
+                    <h3 className="text-lg font-bold font-display text-green-900 mb-6 pb-2 border-b-2 inline-block uppercase tracking-wider" style={{ borderColor: settings.secondaryColor }}>
                         Tin liên quan
                     </h3>
                     <div className="space-y-6">
@@ -269,14 +286,14 @@ const ArticleDetail: React.FC = () => {
                     </div>
 
                     <div className="mt-10 pt-8 border-t border-gray-200">
-                        <div className="bg-green-900 text-white rounded-lg p-6 text-center shadow-lg relative overflow-hidden">
-                             <div className="absolute top-0 right-0 -mr-4 -mt-4 w-20 h-20 bg-yellow-500 rounded-full opacity-20 blur-xl"></div>
+                        <div className="text-white rounded-lg p-6 text-center shadow-lg relative overflow-hidden" style={{ backgroundColor: settings.primaryColor }}>
+                             <div className="absolute top-0 right-0 -mr-4 -mt-4 w-20 h-20 rounded-full opacity-20 blur-xl" style={{ backgroundColor: settings.secondaryColor }}></div>
                              <h4 className="font-display font-bold text-xl mb-2 relative z-10">Gương mặt tiêu biểu</h4>
-                             <div className="w-10 h-1 bg-yellow-500 mx-auto mb-4 relative z-10"></div>
+                             <div className="w-10 h-1 mx-auto mb-4 relative z-10" style={{ backgroundColor: settings.secondaryColor }}></div>
                              <div className="w-20 h-20 mx-auto rounded-full border-4 border-yellow-500/50 mb-3 overflow-hidden shadow-md relative z-10">
                                 <img src="https://picsum.photos/200/200?random=88" className="w-full h-full object-cover" alt="Avatar"/>
                              </div>
-                             <p className="text-yellow-400 font-bold text-sm uppercase tracking-wide relative z-10">Trung úy Nguyễn Văn A</p>
+                             <p className="font-bold text-sm uppercase tracking-wide relative z-10" style={{ color: settings.secondaryColor }}>Trung úy Nguyễn Văn A</p>
                              <p className="text-green-200 text-xs italic mt-1 relative z-10">"Chiến sĩ thi đua toàn quân"</p>
                         </div>
                     </div>

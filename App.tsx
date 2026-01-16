@@ -10,6 +10,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ArticleDetail from './pages/ArticleDetail';
 import { AuthProvider, useLocation, Navigate } from './context/AuthContext';
+import { SiteProvider } from './context/SiteContext';
 
 function AppContent() {
     const { pathname } = useLocation();
@@ -30,9 +31,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <SiteProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+    </SiteProvider>
   );
 }
 

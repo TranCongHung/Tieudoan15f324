@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth, useNavigate, Link } from '../context/AuthContext';
+import { useSiteSettings } from '../context/SiteContext';
 import { Shield, User, Mail, Award, Briefcase, Lock, X, ArrowRight, UserPlus } from 'lucide-react';
 
 const Register: React.FC = () => {
@@ -13,6 +14,7 @@ const Register: React.FC = () => {
   const [error, setError] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
+  const { settings } = useSiteSettings();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -46,11 +48,16 @@ const Register: React.FC = () => {
       {/* Background with Overlay */}
       <div className="absolute inset-0 z-0">
         <img 
-            src="https://picsum.photos/1920/1080?grayscale&blur=2" 
+            src={settings.heroImage || "https://picsum.photos/1920/1080?grayscale&blur=2"} 
             className="w-full h-full object-cover" 
             alt="Background" 
         />
-        <div className="absolute inset-0 bg-gradient-to-bl from-green-900/95 via-green-800/90 to-black/80 mix-blend-multiply"></div>
+        <div 
+             className="absolute inset-0 opacity-90 mix-blend-multiply"
+             style={{ 
+                 background: `linear-gradient(to bottom left, ${settings.primaryColor}, #111111)`
+             }}
+        ></div>
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
       </div>
 
@@ -68,19 +75,19 @@ const Register: React.FC = () => {
             </Link>
 
             {/* Header */}
-            <div className="bg-gradient-to-r from-yellow-600 to-yellow-500 p-8 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-green-800"></div>
+            <div className="p-8 text-center relative overflow-hidden" style={{ background: settings.secondaryColor }}>
+                <div className="absolute top-0 left-0 w-full h-1" style={{ background: settings.primaryColor }}></div>
                 <div className="absolute top-10 -left-10 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
                 
                 <div className="relative z-10 flex flex-col items-center">
-                    <div className="bg-white p-3 rounded-full shadow-lg mb-4 border-2 border-green-800">
-                        <UserPlus className="h-10 w-10 text-yellow-600" />
+                    <div className="bg-white p-3 rounded-full shadow-lg mb-4 border-2" style={{ borderColor: settings.primaryColor }}>
+                        <UserPlus className="h-10 w-10" style={{ color: settings.secondaryColor }} />
                     </div>
-                    <h2 className="text-2xl font-display font-black text-green-900 uppercase tracking-wider">
+                    <h2 className="text-2xl font-display font-black uppercase tracking-wider" style={{ color: settings.primaryColor }}>
                         Đăng Ký Tài Khoản
                     </h2>
-                    <p className="text-green-900/80 text-sm font-serif italic mt-1 font-bold">
-                        Trở thành thành viên Tiểu đoàn 15
+                    <p className="text-sm font-serif italic mt-1 font-bold" style={{ color: settings.primaryColor }}>
+                        Trở thành thành viên {settings.siteTitle}
                     </p>
                 </div>
             </div>
@@ -96,10 +103,10 @@ const Register: React.FC = () => {
                     
                     {/* Name */}
                     <div className="relative group">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 group-focus-within:text-yellow-600">Họ và tên</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Họ và tên</label>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <User className="h-5 w-5 text-gray-400 group-focus-within:text-yellow-600 transition-colors" />
+                                <User className="h-5 w-5 text-gray-400 transition-colors" />
                             </div>
                             <input
                                 id="name"
@@ -108,7 +115,8 @@ const Register: React.FC = () => {
                                 required
                                 value={formData.name}
                                 onChange={handleChange}
-                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
+                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
+                                style={{ '--tw-ring-color': settings.secondaryColor } as any}
                                 placeholder="Nguyễn Văn A"
                             />
                         </div>
@@ -116,10 +124,10 @@ const Register: React.FC = () => {
 
                     {/* Email */}
                     <div className="relative group">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 group-focus-within:text-yellow-600">Gmail</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Gmail</label>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-yellow-600 transition-colors" />
+                                <Mail className="h-5 w-5 text-gray-400 transition-colors" />
                             </div>
                             <input
                                 id="email"
@@ -128,7 +136,8 @@ const Register: React.FC = () => {
                                 required
                                 value={formData.email}
                                 onChange={handleChange}
-                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
+                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
+                                style={{ '--tw-ring-color': settings.secondaryColor } as any}
                                 placeholder="vidu@su324.vn"
                             />
                         </div>
@@ -137,10 +146,10 @@ const Register: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                         {/* Rank */}
                         <div className="relative group">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 group-focus-within:text-yellow-600">Cấp bậc</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Cấp bậc</label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Award className="h-5 w-5 text-gray-400 group-focus-within:text-yellow-600 transition-colors" />
+                                    <Award className="h-5 w-5 text-gray-400 transition-colors" />
                                 </div>
                                 <input
                                     id="rank"
@@ -149,7 +158,8 @@ const Register: React.FC = () => {
                                     required
                                     value={formData.rank}
                                     onChange={handleChange}
-                                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
+                                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
+                                    style={{ '--tw-ring-color': settings.secondaryColor } as any}
                                     placeholder="Trung úy"
                                 />
                             </div>
@@ -157,10 +167,10 @@ const Register: React.FC = () => {
 
                         {/* Position */}
                         <div className="relative group">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 group-focus-within:text-yellow-600">Chức vụ</label>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Chức vụ</label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Briefcase className="h-5 w-5 text-gray-400 group-focus-within:text-yellow-600 transition-colors" />
+                                    <Briefcase className="h-5 w-5 text-gray-400 transition-colors" />
                                 </div>
                                 <input
                                     id="position"
@@ -169,7 +179,8 @@ const Register: React.FC = () => {
                                     required
                                     value={formData.position}
                                     onChange={handleChange}
-                                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
+                                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
+                                    style={{ '--tw-ring-color': settings.secondaryColor } as any}
                                     placeholder="Trung đội trưởng"
                                 />
                             </div>
@@ -178,10 +189,10 @@ const Register: React.FC = () => {
 
                     {/* Password */}
                     <div className="relative group">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 group-focus-within:text-yellow-600">Mật khẩu</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Mật khẩu</label>
                         <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-yellow-600 transition-colors" />
+                                <Lock className="h-5 w-5 text-gray-400 transition-colors" />
                             </div>
                             <input
                                 id="password"
@@ -190,7 +201,8 @@ const Register: React.FC = () => {
                                 required
                                 value={formData.password}
                                 onChange={handleChange}
-                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
+                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
+                                style={{ '--tw-ring-color': settings.secondaryColor } as any}
                                 placeholder="••••••••"
                             />
                         </div>
@@ -199,7 +211,11 @@ const Register: React.FC = () => {
                     <div className="pt-2">
                         <button
                             type="submit"
-                            className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-bold text-green-900 bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transform hover:-translate-y-0.5 transition-all uppercase tracking-wide"
+                            className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5 transition-all uppercase tracking-wide"
+                            style={{ 
+                                backgroundColor: settings.primaryColor,
+                                color: '#ffffff'
+                            }}
                         >
                             Hoàn tất đăng ký <ArrowRight className="ml-2 w-4 h-4" />
                         </button>
@@ -209,7 +225,7 @@ const Register: React.FC = () => {
                 <div className="mt-6 text-center">
                     <p className="text-sm text-gray-600">
                         Đã có tài khoản?{' '}
-                        <Link to="/login" className="font-bold text-green-700 hover:text-green-600 transition-colors">
+                        <Link to="/login" className="font-bold hover:underline transition-colors" style={{ color: settings.primaryColor }}>
                             Đăng nhập ngay
                         </Link>
                     </p>
@@ -217,8 +233,8 @@ const Register: React.FC = () => {
             </div>
         </div>
         
-        <p className="text-center text-green-200/60 text-xs mt-6 font-serif">
-            &copy; 2024 Tiểu đoàn 15 - Sư đoàn 324.
+        <p className="text-center text-white/60 text-xs mt-6 font-serif">
+            &copy; {new Date().getFullYear()} {settings.siteTitle}.
         </p>
       </div>
     </div>

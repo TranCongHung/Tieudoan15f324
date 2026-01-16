@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Article, User, Question, Score, DocumentFile, MediaItem, Leader } from '../../types';
+import { Article, User, Question, Score, DocumentFile, MediaItem, Leader, SiteSettings, Milestone } from '../../types';
 import { storage } from '../../services/storage';
 // Removed AI service import
 import { 
@@ -7,14 +7,15 @@ import {
   Image as ImageIcon, Calendar, User as UserIcon, Eye, ArrowLeft, CheckCircle, 
   Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, 
   Type, Quote, Link as LinkIcon, Undo, Redo, Code, Monitor, Palette, Upload, Maximize, Move, Shield,
-  Download, FileSpreadsheet, BarChart3, CalendarDays, FolderPlus, File, Home, DownloadCloud, Briefcase
+  Download, FileSpreadsheet, BarChart3, CalendarDays, FolderPlus, File, Home, DownloadCloud, Briefcase, Layout as LayoutIcon, Clock, Scissors
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { useNavigate } from '../../context/AuthContext';
 import { useAuth } from '../../context/AuthContext';
+import { useSiteSettings } from '../../context/SiteContext';
 import * as XLSX from 'xlsx';
 
-type Tab = 'articles' | 'personnel' | 'questions' | 'scores' | 'documents' | 'media' | 'leaders';
+type Tab = 'articles' | 'personnel' | 'questions' | 'scores' | 'documents' | 'media' | 'leaders' | 'appearance' | 'history';
 type ViewMode = 'list' | 'editor';
 type TimeFilter = 'day' | 'week' | 'month';
 
@@ -30,6 +31,11 @@ const AdminDashboard: React.FC = () => {
   const [documents, setDocuments] = useState<DocumentFile[]>([]);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [leaders, setLeaders] = useState<Leader[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+
+  // Site Settings (Via Context)
+  const { settings, updateSettings, resetSettings } = useSiteSettings();
+  const [tempSettings, setTempSettings] = useState<SiteSettings>(settings);
 
   // Document Manager States
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
@@ -49,13 +55,17 @@ const AdminDashboard: React.FC = () => {
   const [mediaSourceType, setMediaSourceType] = useState<'link' | 'upload'>('link');
   const [mediaThumbSourceType, setMediaThumbSourceType] = useState<'link' | 'upload'>('link');
 
-  // Article Editor States
+  // Article/History Editor States
   const [editorTitle, setEditorTitle] = useState('');
   const [editorContent, setEditorContent] = useState(''); // Stores HTML
   const [editorSummary, setEditorSummary] = useState('');
   const [editorImage, setEditorImage] = useState('');
-  const [editorAuthor, setEditorAuthor] = useState('');
-  const [editorDate, setEditorDate] = useState('');
+  const [editorAuthor, setEditorAuthor] = useState(''); // For Articles
+  const [editorDate, setEditorDate] = useState(''); // For Articles
+  const [editorYear, setEditorYear] = useState(''); // For History
+  const [editorSubtitle, setEditorSubtitle] = useState(''); // For History
+  const [editorIcon, setEditorIcon] = useState('Flag'); // For History
+  
   const [featuredImgSourceType, setFeaturedImgSourceType] = useState<'link' | 'upload'>('link');
   
   // Advanced Editor States
@@ -65,6 +75,8 @@ const AdminDashboard: React.FC = () => {
   const editorContentRef = useRef<HTMLDivElement>(null); // Ref for ContentEditable div
   const excelInputRef = useRef<HTMLInputElement>(null); // For Excel Upload
   const docInputRef = useRef<HTMLInputElement>(null); // For Document Upload
+  const settingLogoInputRef = useRef<HTMLInputElement>(null); // For Settings Logo
+  const settingHeroInputRef = useRef<HTMLInputElement>(null); // For Settings Hero
 
   // Image Resizing State
   const [selectedImg, setSelectedImg] = useState<HTMLImageElement | null>(null);
@@ -78,8 +90,13 @@ const AdminDashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
+      // Sync temp settings when global settings change (or on first load)
+      setTempSettings(settings);
+  }, [settings]);
+
+  useEffect(() => {
     setSearchTerm('');
-    if (activeTab !== 'articles') {
+    if (activeTab !== 'articles' && activeTab !== 'history') {
         setViewMode('list');
     }
   }, [activeTab]);
@@ -186,6 +203,7 @@ const AdminDashboard: React.FC = () => {
     setDocuments(storage.getDocuments());
     setMediaItems(storage.getMedia());
     setLeaders(storage.getLeaders());
+    setMilestones(storage.getHistory());
   };
 
   const handleLogout = () => {
@@ -201,8 +219,6 @@ const AdminDashboard: React.FC = () => {
 
     if (type === 'documents') {
         const item = documents.find(d => d.id === id);
-        
-        // Validation: Cannot delete non-empty folders
         if (item?.isFolder) {
             const hasChildren = documents.some(d => d.parentId === id);
             if (hasChildren) {
@@ -219,6 +235,12 @@ const AdminDashboard: React.FC = () => {
             const newData = articles.filter(i => i.id !== id);
             storage.saveArticles(newData);
             setArticles(newData);
+            break;
+        }
+        case 'history': {
+            const newData = milestones.filter(i => i.id !== id);
+            storage.saveHistory(newData);
+            setMilestones(newData);
             break;
         }
         case 'personnel': {
@@ -240,7 +262,6 @@ const AdminDashboard: React.FC = () => {
             break;
         }
         case 'documents': {
-            // Robust delete for documents (files and folders)
             const newData = documents.filter(i => i.id !== id);
             storage.saveDocuments(newData);
             setDocuments(newData);
@@ -259,6 +280,37 @@ const AdminDashboard: React.FC = () => {
             break;
         }
     }
+  };
+
+  // --- SITE SETTINGS LOGIC ---
+  const handleSettingsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setTempSettings({
+          ...tempSettings,
+          [e.target.name]: e.target.value
+      });
+  };
+
+  const handleSettingsImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'logoUrl' | 'heroImage') => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+          alert("Ảnh quá lớn (Giới hạn 2MB)");
+          return;
+      }
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+          setTempSettings({
+              ...tempSettings,
+              [field]: evt.target?.result as string
+          });
+      };
+      reader.readAsDataURL(file);
+      e.target.value = ''; // Reset input
+  };
+
+  const saveSiteSettings = () => {
+      updateSettings(tempSettings);
+      alert("Đã lưu cấu hình giao diện thành công!");
   };
 
   // --- DOCUMENT MANAGER LOGIC ---
@@ -400,39 +452,59 @@ const AdminDashboard: React.FC = () => {
       return chartData.sort((a, b) => b.score - a.score);
   };
 
-  // --- EDITOR LOGIC ---
-  const openArticleEditor = (article?: Article) => {
-    if (article) {
-        setEditingItem(article);
-        setEditorTitle(article.title);
-        setEditorContent(article.content);
-        setEditorSummary(article.summary);
-        setEditorImage(article.imageUrl);
-        setEditorAuthor(article.author);
-        setEditorDate(article.date);
+  // --- EDITOR LOGIC (Shared for Article & History) ---
+  const openEditor = (item?: any, type: 'articles' | 'history' = 'articles') => {
+    setActiveTab(type);
+    setEditingItem(item);
+    setIsVisualMode(true);
+    setViewMode('editor');
+    setSelectedImg(null);
+
+    if (item) {
+        setEditorTitle(item.title);
+        setEditorImage(item.imageUrl || item.image || ''); // Article uses imageUrl, Milestone uses image
         
+        // Content mapping
+        if (type === 'articles') {
+            setEditorContent(item.content);
+            setEditorSummary(item.summary);
+            setEditorAuthor(item.author);
+            setEditorDate(item.date);
+        } else {
+            setEditorContent(item.story);
+            setEditorSummary(item.content); // Use summary field for 'content' (description)
+            setEditorYear(item.year);
+            setEditorSubtitle(item.subtitle);
+            setEditorIcon(item.icon);
+        }
+
         // Determine source type for featured image
-        if (article.imageUrl && article.imageUrl.startsWith('data:')) {
+        const img = item.imageUrl || item.image;
+        if (img && img.startsWith('data:')) {
             setFeaturedImgSourceType('upload');
         } else {
             setFeaturedImgSourceType('link');
         }
     } else {
-        setEditingItem(null);
+        // Defaults
         setEditorTitle('');
         setEditorContent('');
         setEditorSummary('');
         setEditorImage('');
-        setEditorAuthor('Ban biên tập'); 
-        setEditorDate(new Date().toISOString().split('T')[0]);
         setFeaturedImgSourceType('link');
+
+        if (type === 'articles') {
+            setEditorAuthor('Ban biên tập'); 
+            setEditorDate(new Date().toISOString().split('T')[0]);
+        } else {
+            setEditorYear(new Date().getFullYear().toString());
+            setEditorSubtitle('');
+            setEditorIcon('Flag');
+        }
     }
-    setIsVisualMode(true);
-    setViewMode('editor');
-    setSelectedImg(null);
   };
 
-  // --- RICH TEXT EXEC COMMANDS ---
+  // ... (Rich text commands, image resizing logic) ...
   const execCmd = (command: string, value: string | undefined = undefined) => {
       if (!isVisualMode) return;
       document.execCommand(command, false, value);
@@ -445,8 +517,7 @@ const AdminDashboard: React.FC = () => {
   const handleEditorInput = (e: React.FormEvent<HTMLDivElement>) => {
       setEditorContent(e.currentTarget.innerHTML);
   };
-
-  // --- IMAGE RESIZING HANDLERS ---
+  
   const handleEditorClick = (e: React.MouseEvent) => {
       if (e.target instanceof HTMLImageElement) {
           setSelectedImg(e.target);
@@ -529,7 +600,6 @@ const AdminDashboard: React.FC = () => {
       }
   };
 
-  // --- MEDIA HANDLERS ---
   const handleAddMediaClick = () => {
       fileInputRef.current?.click();
   };
@@ -541,12 +611,6 @@ const AdminDashboard: React.FC = () => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
-
-      if (file.size > 2 * 1024 * 1024) {
-          alert("Ảnh quá lớn! Vui lòng chọn ảnh dưới 2MB.");
-          return;
-      }
-
       const reader = new FileReader();
       reader.onload = (e) => {
           const base64 = e.target?.result as string;
@@ -565,46 +629,62 @@ const AdminDashboard: React.FC = () => {
   const handleFeaturedImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
-
-      if (file.size > 2 * 1024 * 1024) {
-          alert("Ảnh quá lớn! Vui lòng chọn ảnh dưới 2MB.");
-          return;
-      }
-
       const reader = new FileReader();
       reader.onload = (e) => {
           const base64 = e.target?.result as string;
           setEditorImage(base64);
-          setFeaturedImgSourceType('upload'); // Switch view to upload to show result
+          setFeaturedImgSourceType('upload');
       };
       reader.readAsDataURL(file);
       event.target.value = '';
   };
 
-
-  const saveArticle = () => {
+  const saveContent = () => {
       if (!editorTitle || !editorContent) {
           alert("Vui lòng nhập tiêu đề và nội dung.");
           return;
       }
 
       const id = editingItem ? editingItem.id : Date.now().toString();
-      const newArticle: Article = {
-          id,
-          title: editorTitle,
-          content: editorContent,
-          summary: editorSummary || editorContent.substring(0, 100).replace(/<[^>]*>?/gm, '') + '...', 
-          imageUrl: editorImage || 'https://picsum.photos/800/400',
-          author: editorAuthor,
-          date: editorDate
-      };
 
-      const newData = editingItem 
-        ? articles.map(i => i.id === id ? newArticle : i) 
-        : [newArticle, ...articles]; 
+      if (activeTab === 'articles') {
+          const newArticle: Article = {
+              id,
+              title: editorTitle,
+              content: editorContent,
+              summary: editorSummary || editorContent.substring(0, 100).replace(/<[^>]*>?/gm, '') + '...', 
+              imageUrl: editorImage || 'https://picsum.photos/800/400',
+              author: editorAuthor,
+              date: editorDate
+          };
+          const newData = editingItem 
+            ? articles.map(i => i.id === id ? newArticle : i) 
+            : [newArticle, ...articles]; 
+          storage.saveArticles(newData);
+          setArticles(newData);
+      } else if (activeTab === 'history') {
+          // Preserve existing quiz data if editing, or empty array if new
+          const existingQuiz = editingItem?.quiz || [];
+          
+          const newMilestone: Milestone = {
+              id,
+              year: editorYear,
+              title: editorTitle,
+              subtitle: editorSubtitle,
+              content: editorSummary, // Mapping summary to content (description)
+              story: editorContent, // HTML content
+              image: editorImage || 'https://picsum.photos/600/400',
+              icon: editorIcon,
+              quiz: existingQuiz
+          };
+          const newData = editingItem
+            ? milestones.map(i => i.id === id ? newMilestone : i)
+            : [...milestones, newMilestone].sort((a,b) => (a.year === 'Nay' ? 1 : b.year === 'Nay' ? -1 : parseInt(a.year) - parseInt(b.year)));
+          
+          storage.saveHistory(newData);
+          setMilestones(newData);
+      }
       
-      storage.saveArticles(newData);
-      setArticles(newData);
       setViewMode('list');
       setEditingItem(null);
   };
@@ -617,7 +697,6 @@ const AdminDashboard: React.FC = () => {
 
       switch (activeTab) {
           case 'personnel': {
-               // Validate duplicate email if creating new
                const email = formData.get('email') as string;
                if (!editingItem && usersList.find(u => u.email === email)) {
                    alert("Email này đã được sử dụng!");
@@ -631,11 +710,10 @@ const AdminDashboard: React.FC = () => {
                   rank: formData.get('rank') as string,
                   position: formData.get('position') as string,
                   unit: formData.get('unit') as string,
-                  password: formData.get('password') as string, // In real app, don't update password if empty on edit
+                  password: formData.get('password') as string,
                   role: formData.get('role') as 'admin' | 'user'
               };
               
-              // If editing and password is left empty, keep old password
               if (editingItem && !newItem.password) {
                   newItem.password = editingItem.password;
               }
@@ -645,6 +723,7 @@ const AdminDashboard: React.FC = () => {
               setUsersList(newData);
               break;
           }
+          // ... (scores, documents, media, leaders, questions logic same as before) ...
           case 'scores': {
               const militaryScore = Number(formData.get('militaryScore'));
               const politicalScore = Number(formData.get('politicalScore'));
@@ -670,16 +749,13 @@ const AdminDashboard: React.FC = () => {
           }
            case 'documents': {
               let newItem: DocumentFile;
-              
               if (editingItem) {
-                  // Edit Mode (Rename) - Preserve existing structure properties
                   newItem = {
                       ...editingItem,
                       name: formData.get('name') as string,
-                      date: new Date().toISOString().split('T')[0] // Update modification date
+                      date: new Date().toISOString().split('T')[0] 
                   };
               } else {
-                  // Create Mode (Fallback, usually via Upload/CreateFolder)
                   newItem = {
                       id,
                       name: formData.get('name') as string,
@@ -690,22 +766,16 @@ const AdminDashboard: React.FC = () => {
                       size: '0 KB' 
                   };
               }
-
               const newData = editingItem ? documents.map(i => i.id === id ? newItem : i) : [...documents, newItem];
               storage.saveDocuments(newData);
               setDocuments(newData);
               break;
           }
           case 'media': {
-             // 1. Handle Main Media URL (Video/Audio)
              let url = formData.get('url') as string;
              const file = formData.get('fileUpload') as File;
              
              if (mediaSourceType === 'upload' && file && file.size > 0) {
-                 if (file.size > 10 * 1024 * 1024) { // 10MB limit check
-                     alert("File Media quá lớn (Giới hạn 10MB)");
-                     return;
-                 }
                  url = await new Promise((resolve) => {
                      const reader = new FileReader();
                      reader.onload = (e) => resolve(e.target?.result as string);
@@ -715,15 +785,10 @@ const AdminDashboard: React.FC = () => {
                  url = editingItem.url;
              }
 
-             // 2. Handle Thumbnail URL
              let thumbnail = formData.get('thumbnail') as string;
              const thumbFile = formData.get('thumbnailUpload') as File;
 
              if (mediaThumbSourceType === 'upload' && thumbFile && thumbFile.size > 0) {
-                 if (thumbFile.size > 2 * 1024 * 1024) { // 2MB limit for images
-                     alert("Ảnh Thumbnail quá lớn (Giới hạn 2MB)");
-                     return;
-                 }
                  thumbnail = await new Promise((resolve) => {
                      const reader = new FileReader();
                      reader.onload = (e) => resolve(e.target?.result as string);
@@ -748,15 +813,10 @@ const AdminDashboard: React.FC = () => {
               break;
           }
           case 'leaders': {
-             // Handle Leader Image
              let image = formData.get('image') as string;
              const file = formData.get('imageUpload') as File;
              
              if (mediaSourceType === 'upload' && file && file.size > 0) {
-                 if (file.size > 2 * 1024 * 1024) { 
-                     alert("Ảnh quá lớn (Giới hạn 2MB)");
-                     return;
-                 }
                  image = await new Promise((resolve) => {
                      const reader = new FileReader();
                      reader.onload = (e) => resolve(e.target?.result as string);
@@ -796,15 +856,13 @@ const AdminDashboard: React.FC = () => {
       setEditingItem(null);
   };
 
-  // --- EXCEL HANDLING ---
-  
+  // ... (Excel logic same as before) ...
   const handleDownloadTemplate = () => {
       const header = ["Nội dung câu hỏi", "Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D", "Đáp án đúng (A/B/C/D)", "Giải thích"];
       const sampleData = [
           ["Sư đoàn 324 thành lập ngày nào?", "01/07/1955", "22/12/1944", "03/02/1930", "19/05/1890", "A", "Ngày 01/07/1955 tại Tĩnh Gia, Thanh Hóa."],
           ["Truyền thống Sư đoàn là gì?", "Thần tốc", "Trung dũng, kiên cường", "Quyết thắng", "Đoàn kết", "B", "8 chữ vàng: Trung dũng, kiên cường, liên tục tấn công..."]
       ];
-
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.aoa_to_sheet([header, ...sampleData]);
       XLSX.utils.book_append_sheet(wb, ws, "Mau_Cau_Hoi");
@@ -827,10 +885,7 @@ const AdminDashboard: React.FC = () => {
               const wsname = wb.SheetNames[0];
               const ws = wb.Sheets[wsname];
               const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
-
-              // Skip header row
               const rows = data.slice(1).filter(r => r.length > 0);
-              
               const newQuestions: Question[] = rows.map((row, index) => {
                   const questionText = row[0];
                   const options = [row[1], row[2], row[3], row[4]].filter(o => o !== undefined && o !== null);
@@ -839,9 +894,7 @@ const AdminDashboard: React.FC = () => {
                   if (correctChar === 'B') correctIndex = 1;
                   else if (correctChar === 'C') correctIndex = 2;
                   else if (correctChar === 'D') correctIndex = 3;
-                  
                   const explanation = row[6];
-
                   return {
                       id: `excel_${Date.now()}_${index}`,
                       questionText: questionText || "Câu hỏi chưa có nội dung",
@@ -850,7 +903,6 @@ const AdminDashboard: React.FC = () => {
                       explanation: explanation || ""
                   };
               });
-
               if (newQuestions.length > 0) {
                   const merged = [...questions, ...newQuestions];
                   storage.saveQuestions(merged);
@@ -859,33 +911,29 @@ const AdminDashboard: React.FC = () => {
               } else {
                   alert("Không tìm thấy dữ liệu hợp lệ trong file Excel.");
               }
-
           } catch (err) {
               console.error(err);
               alert("Lỗi khi đọc file Excel. Vui lòng kiểm tra lại định dạng.");
           }
-          // Reset input
           if (excelInputRef.current) excelInputRef.current.value = '';
       };
       reader.readAsBinaryString(file);
   };
 
-  // Helper to filter data based on search term
   const getFilteredData = () => {
     const term = searchTerm.toLowerCase();
     switch (activeTab) {
         case 'articles': return articles.filter(x => x.title.toLowerCase().includes(term) || x.author.toLowerCase().includes(term));
+        case 'history': return milestones.filter(x => x.year.toLowerCase().includes(term) || x.title.toLowerCase().includes(term));
         case 'personnel': return usersList.filter(x => x.name.toLowerCase().includes(term) || x.email.toLowerCase().includes(term));
         case 'questions': return questions.filter(x => x.questionText.toLowerCase().includes(term));
         case 'scores': return scores.filter(x => x.unitName.toLowerCase().includes(term));
         case 'documents': 
-            // Filter by Parent ID AND Search Term
             return documents.filter(x => {
                 const matchParent = x.parentId === currentFolderId;
                 const matchSearch = term === '' || x.name.toLowerCase().includes(term);
                 return matchParent && matchSearch;
             }).sort((a, b) => {
-                // Sort Folders first, then Files
                 if (a.isFolder && !b.isFolder) return -1;
                 if (!a.isFolder && b.isFolder) return 1;
                 return a.name.localeCompare(b.name);
@@ -899,7 +947,7 @@ const AdminDashboard: React.FC = () => {
   const filteredData = getFilteredData();
   const chartData = getChartData();
 
-  // --- TOOLBAR BUTTON COMPONENT ---
+  // Toolbar Button
   const ToolbarButton = ({ icon: Icon, onClick, title, active = false }: any) => (
       <button 
         type="button"
@@ -911,416 +959,586 @@ const AdminDashboard: React.FC = () => {
       </button>
   );
 
+  // --- RENDER APPEARANCE SETTINGS ---
+  const renderAppearanceSettings = () => (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 animate-fade-in max-w-4xl mx-auto">
+          {/* ... (Appearance code same as previous) ... */}
+          <div className="flex justify-between items-center mb-8 pb-4 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-800">Cấu hình Giao diện (CMS)</h2>
+              <div className="flex space-x-3">
+                  <button onClick={resetSettings} className="px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg font-bold border border-red-200 transition-colors">
+                      Khôi phục mặc định
+                  </button>
+                  <button onClick={saveSiteSettings} className="px-6 py-2 bg-green-700 text-white rounded-lg font-bold hover:bg-green-800 shadow-lg transition-transform hover:scale-105 flex items-center">
+                      <Save className="w-5 h-5 mr-2" /> Lưu thay đổi
+                  </button>
+              </div>
+          </div>
+          {/* ... (Inputs) ... */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* General Info */}
+              <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-gray-700 border-l-4 border-green-600 pl-3 uppercase">Thông tin chung</h3>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Tên Website / Đơn vị</label>
+                      <input name="siteTitle" type="text" value={tempSettings.siteTitle} onChange={handleSettingsChange} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả phụ (Subtitle)</label>
+                      <input name="siteSubtitle" type="text" value={tempSettings.siteSubtitle} onChange={handleSettingsChange} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Logo URL (Icon)</label>
+                      <div className="flex space-x-2">
+                          <input name="logoUrl" type="text" value={tempSettings.logoUrl} onChange={handleSettingsChange} placeholder="https://..." className="flex-1 p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                          <button onClick={() => settingLogoInputRef.current?.click()} className="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-700">Upload</button>
+                          <input type="file" ref={settingLogoInputRef} className="hidden" accept="image/*" onChange={(e) => handleSettingsImageUpload(e, 'logoUrl')} />
+                      </div>
+                      {tempSettings.logoUrl && <img src={tempSettings.logoUrl} alt="Logo Preview" className="h-10 mt-2 object-contain bg-gray-100 p-1 rounded" />}
+                  </div>
+              </div>
+
+              {/* Colors */}
+              <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-gray-700 border-l-4 border-green-600 pl-3 uppercase">Màu sắc chủ đạo</h3>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Màu chính (Header/Footer)</label>
+                      <div className="flex items-center space-x-2">
+                          <input name="primaryColor" type="color" value={tempSettings.primaryColor} onChange={handleSettingsChange} className="h-10 w-16 p-1 rounded border border-gray-300 cursor-pointer" />
+                          <input name="primaryColor" type="text" value={tempSettings.primaryColor} onChange={handleSettingsChange} className="flex-1 p-2 border border-gray-300 rounded uppercase font-mono" />
+                      </div>
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Màu phụ (Buttons/Highlights)</label>
+                      <div className="flex items-center space-x-2">
+                          <input name="secondaryColor" type="color" value={tempSettings.secondaryColor} onChange={handleSettingsChange} className="h-10 w-16 p-1 rounded border border-gray-300 cursor-pointer" />
+                          <input name="secondaryColor" type="text" value={tempSettings.secondaryColor} onChange={handleSettingsChange} className="flex-1 p-2 border border-gray-300 rounded uppercase font-mono" />
+                      </div>
+                  </div>
+              </div>
+
+              {/* Hero Section */}
+              <div className="space-y-6 md:col-span-2">
+                  <h3 className="text-lg font-bold text-gray-700 border-l-4 border-green-600 pl-3 uppercase">Trang chủ (Hero Section)</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề lớn</label>
+                          <input name="heroTitle" type="text" value={tempSettings.heroTitle} onChange={handleSettingsChange} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                      </div>
+                      <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh nền (Banner)</label>
+                          <div className="flex space-x-2">
+                              <input name="heroImage" type="text" value={tempSettings.heroImage} onChange={handleSettingsChange} className="flex-1 p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                              <button onClick={() => settingHeroInputRef.current?.click()} className="px-3 py-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-700">Upload</button>
+                              <input type="file" ref={settingHeroInputRef} className="hidden" accept="image/*" onChange={(e) => handleSettingsImageUpload(e, 'heroImage')} />
+                          </div>
+                      </div>
+                      <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả ngắn</label>
+                          <textarea name="heroSubtitle" rows={2} value={tempSettings.heroSubtitle} onChange={handleSettingsChange} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"></textarea>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Contact Info */}
+              <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-gray-700 border-l-4 border-green-600 pl-3 uppercase">Thông tin liên hệ</h3>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
+                      <input name="contactAddress" type="text" value={tempSettings.contactAddress} onChange={handleSettingsChange} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <input name="contactEmail" type="text" value={tempSettings.contactEmail} onChange={handleSettingsChange} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                  </div>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Hotline</label>
+                      <input name="contactPhone" type="text" value={tempSettings.contactPhone} onChange={handleSettingsChange} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                  </div>
+              </div>
+
+              {/* Advanced CSS */}
+              <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-gray-700 border-l-4 border-green-600 pl-3 uppercase">Nâng cao</h3>
+                  <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Custom CSS (WordPress Style)</label>
+                      <textarea 
+                          name="customCss" 
+                          rows={6} 
+                          value={tempSettings.customCss} 
+                          onChange={handleSettingsChange} 
+                          placeholder=".header { background: red !important; }"
+                          className="w-full p-2 border border-gray-300 rounded bg-gray-900 text-green-400 font-mono text-xs focus:ring-green-500 focus:border-green-500"
+                      ></textarea>
+                      <p className="text-xs text-gray-500 mt-1">Chèn mã CSS để tùy biến sâu giao diện. Cẩn thận khi sử dụng.</p>
+                  </div>
+              </div>
+          </div>
+      </div>
+  );
+
   const renderArticleEditor = () => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 min-h-[600px] flex flex-col animate-fade-in">
-        {/* Editor Toolbar Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl sticky top-0 z-20">
-            <div className="flex items-center space-x-3">
-                 <button 
-                    onClick={() => {
-                        if (window.confirm("Chưa lưu thay đổi. Bạn có chắc muốn thoát?")) {
-                            setViewMode('list');
-                            setEditingItem(null);
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden animate-fade-in flex flex-col h-[calc(100vh-100px)]">
+          {/* Editor Header */}
+          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+              <h2 className="font-bold text-gray-700 flex items-center">
+                  <Edit className="w-5 h-5 mr-2" />
+                  {editingItem ? `Chỉnh sửa ${activeTab === 'history' ? 'Mốc lịch sử' : 'Bài viết'}` : `Thêm mới ${activeTab === 'history' ? 'Mốc lịch sử' : 'Bài viết'}`}
+              </h2>
+              <div className="flex space-x-3">
+                  <button 
+                      onClick={() => {
+                        if(window.confirm("Hủy bỏ thay đổi?")) {
+                            setEditingItem(null); 
+                            setViewMode('list'); 
                         }
-                    }} 
-                    className="p-2 hover:bg-gray-200 rounded-full text-gray-500"
-                 >
-                     <ChevronLeft className="w-5 h-5"/>
-                 </button>
-                 <span className="font-bold text-gray-700">{editingItem ? 'Chỉnh sửa bài viết' : 'Viết bài mới'}</span>
-            </div>
-            <div className="flex items-center space-x-2">
-                 <button onClick={saveArticle} className="flex items-center bg-green-700 text-white px-5 py-2 rounded-lg hover:bg-green-800 shadow-md font-bold">
-                     <Save className="w-4 h-4 mr-2"/> Lưu bài viết
-                 </button>
-            </div>
-        </div>
+                      }}
+                      className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg font-bold"
+                  >
+                      Hủy bỏ
+                  </button>
+                  <button 
+                      onClick={saveContent}
+                      className="px-6 py-2 bg-green-700 text-white rounded-lg font-bold hover:bg-green-800 shadow-md flex items-center"
+                  >
+                      <Save className="w-4 h-4 mr-2" /> Lưu {activeTab === 'history' ? 'lịch sử' : 'bài viết'}
+                  </button>
+              </div>
+          </div>
 
-        <div className="flex flex-col lg:flex-row h-full">
-            {/* Main Editor Area */}
-            <div className="flex-1 p-6 border-r border-gray-200 overflow-y-auto">
-                 <input
-                    type="text"
-                    placeholder="Tiêu đề bài viết..."
-                    className="w-full text-3xl font-display font-bold text-gray-900 placeholder-gray-300 border-none focus:ring-0 outline-none mb-6 px-0"
-                    value={editorTitle}
-                    onChange={(e) => setEditorTitle(e.target.value)}
-                 />
-                 
-                 <div className="mb-6">
-                     <label className="block text-sm font-bold text-gray-500 uppercase mb-2">Tóm tắt (Sapo)</label>
-                     <textarea
-                        className="w-full p-4 bg-yellow-50/50 border border-yellow-200 rounded-lg text-gray-700 font-serif italic focus:ring-2 focus:ring-yellow-400 focus:border-transparent resize-none"
-                        rows={3}
-                        placeholder="Nội dung tóm tắt hiển thị đầu bài..."
-                        value={editorSummary}
-                        onChange={(e) => setEditorSummary(e.target.value)}
-                     ></textarea>
-                 </div>
+          <div className="flex flex-1 overflow-hidden">
+              {/* Main Content Area */}
+              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                  <input
+                      type="text"
+                      placeholder="Tiêu đề..."
+                      value={editorTitle}
+                      onChange={(e) => setEditorTitle(e.target.value)}
+                      className="w-full text-4xl font-display font-black text-gray-800 placeholder-gray-300 border-none focus:ring-0 bg-transparent mb-6 p-0"
+                  />
+                  
+                  {/* Toolbar */}
+                  <div className="sticky top-0 z-40 bg-white border border-gray-200 rounded-lg shadow-sm mb-4 p-2 flex flex-wrap gap-1 items-center">
+                       <ToolbarButton icon={Bold} onClick={() => execCmd('bold')} title="In đậm" />
+                       <ToolbarButton icon={Italic} onClick={() => execCmd('italic')} title="In nghiêng" />
+                       <ToolbarButton icon={Underline} onClick={() => execCmd('underline')} title="Gạch chân" />
+                       <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                       <ToolbarButton icon={List} onClick={() => execCmd('insertUnorderedList')} title="Danh sách" />
+                       <ToolbarButton icon={ListOrdered} onClick={() => execCmd('insertOrderedList')} title="Danh sách số" />
+                       <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                       <ToolbarButton icon={AlignLeft} onClick={() => execCmd('justifyLeft')} title="Căn trái" />
+                       <ToolbarButton icon={AlignCenter} onClick={() => execCmd('justifyCenter')} title="Căn giữa" />
+                       <ToolbarButton icon={AlignRight} onClick={() => execCmd('justifyRight')} title="Căn phải" />
+                       <ToolbarButton icon={AlignJustify} onClick={() => execCmd('justifyFull')} title="Căn đều" />
+                       <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                       <ToolbarButton icon={Quote} onClick={() => { execCmd('formatBlock', 'BLOCKQUOTE') }} title="Trích dẫn" />
+                       <ToolbarButton icon={Code} onClick={() => execCmd('formatBlock', 'PRE')} title="Mã nguồn" />
+                       <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                       {/* History Page Break Button */}
+                       {activeTab === 'history' && (
+                           <>
+                                <button 
+                                    onClick={() => execCmd('insertHorizontalRule')}
+                                    className="p-2 rounded hover:bg-gray-200 transition-colors text-red-600 font-bold flex items-center border border-red-200 bg-red-50 text-xs"
+                                    title="Ngắt trang sách (Chèn dấu gạch ngang)"
+                                >
+                                    <Scissors className="h-3 w-3 mr-1"/> Ngắt trang
+                                </button>
+                                <div className="w-px h-6 bg-gray-300 mx-1"></div>
+                           </>
+                       )}
+                       <ToolbarButton icon={LinkIcon} onClick={() => { const url = prompt('Nhập liên kết:'); if(url) execCmd('createLink', url); }} title="Chèn liên kết" />
+                       <ToolbarButton icon={ImageIcon} onClick={handleAddMediaClick} title="Chèn ảnh" />
+                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+                       
+                       <div className="ml-auto flex items-center space-x-2">
+                           <button 
+                                onClick={() => setIsVisualMode(!isVisualMode)} 
+                                className={`px-3 py-1.5 text-xs font-bold rounded border ${isVisualMode ? 'bg-white text-gray-700 border-gray-300' : 'bg-gray-800 text-white border-gray-800'}`}
+                           >
+                               {isVisualMode ? <><Monitor className="w-3 h-3 inline mr-1"/> Trực quan</> : <><Code className="w-3 h-3 inline mr-1"/> HTML</>}
+                           </button>
+                       </div>
+                  </div>
 
-                 {/* Rich Text Toolbar */}
-                 <div className="sticky top-0 z-10 bg-white border border-gray-200 rounded-lg shadow-sm mb-4 flex flex-wrap items-center p-1 gap-1">
-                     <ToolbarButton icon={Bold} onClick={() => execCmd('bold')} title="In đậm"/>
-                     <ToolbarButton icon={Italic} onClick={() => execCmd('italic')} title="In nghiêng"/>
-                     <ToolbarButton icon={Underline} onClick={() => execCmd('underline')} title="Gạch chân"/>
-                     <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                     <ToolbarButton icon={AlignLeft} onClick={() => execCmd('justifyLeft')} title="Căn trái"/>
-                     <ToolbarButton icon={AlignCenter} onClick={() => execCmd('justifyCenter')} title="Căn giữa"/>
-                     <ToolbarButton icon={AlignRight} onClick={() => execCmd('justifyRight')} title="Căn phải"/>
-                     <ToolbarButton icon={AlignJustify} onClick={() => execCmd('justifyFull')} title="Căn đều"/>
-                     <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                     <ToolbarButton icon={List} onClick={() => execCmd('insertUnorderedList')} title="Danh sách"/>
-                     <ToolbarButton icon={ListOrdered} onClick={() => execCmd('insertOrderedList')} title="Danh sách số"/>
-                     <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                     <ToolbarButton icon={Undo} onClick={() => execCmd('undo')} title="Hoàn tác"/>
-                     <ToolbarButton icon={Redo} onClick={() => execCmd('redo')} title="Làm lại"/>
-                     <div className="w-px h-6 bg-gray-300 mx-1"></div>
-                     <ToolbarButton icon={ImageIcon} onClick={handleAddMediaClick} title="Chèn ảnh"/>
-                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
-                 </div>
+                  {/* Content Editor */}
+                  <div className="relative min-h-[500px]">
+                      {isVisualMode ? (
+                          <div
+                              ref={editorContentRef}
+                              contentEditable
+                              onInput={handleEditorInput}
+                              onClick={handleEditorClick}
+                              className="prose prose-lg max-w-none min-h-[500px] outline-none"
+                              dangerouslySetInnerHTML={{ __html: editorContent }}
+                          ></div>
+                      ) : (
+                          <textarea
+                              value={editorContent}
+                              onChange={(e) => setEditorContent(e.target.value)}
+                              className="w-full h-full min-h-[500px] font-mono text-sm bg-gray-900 text-green-400 p-4 rounded-lg"
+                          />
+                      )}
 
-                 {/* Content Editable Area */}
-                 <div className="relative min-h-[500px]">
-                     <div
-                        ref={editorContentRef}
-                        contentEditable
-                        className="prose prose-lg max-w-none min-h-[500px] outline-none p-4 border border-dashed border-gray-200 rounded-lg focus:border-green-300 transition-colors"
-                        onInput={handleEditorInput}
-                        onClick={handleEditorClick}
-                        dangerouslySetInnerHTML={{ __html: editorContent }} // Initial render
-                     ></div>
+                      {/* Image Resize Overlay */}
+                      {selectedImg && isVisualMode && (
+                          <div 
+                              className="absolute border-2 border-blue-500 z-50 pointer-events-none"
+                              style={{
+                                  top: overlayPos.top,
+                                  left: overlayPos.left,
+                                  width: overlayPos.width,
+                                  height: overlayPos.height
+                              }}
+                          >
+                              <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-white shadow-lg rounded-lg p-1 flex space-x-1 pointer-events-auto">
+                                  <button onClick={() => handleAlignImage('left')} className="p-1 hover:bg-gray-100 rounded" title="Trái"><AlignLeft className="w-4 h-4"/></button>
+                                  <button onClick={() => handleAlignImage('center')} className="p-1 hover:bg-gray-100 rounded" title="Giữa"><AlignCenter className="w-4 h-4"/></button>
+                                  <button onClick={() => handleAlignImage('right')} className="p-1 hover:bg-gray-100 rounded" title="Phải"><AlignRight className="w-4 h-4"/></button>
+                                  <div className="w-px h-4 bg-gray-300 mx-1 self-center"></div>
+                                  <button onClick={handleDeleteImage} className="p-1 hover:bg-red-100 text-red-600 rounded" title="Xóa"><Trash2 className="w-4 h-4"/></button>
+                              </div>
+                              {['nw', 'ne', 'sw', 'se'].map(dir => (
+                                  <div 
+                                      key={dir}
+                                      className="absolute w-3 h-3 bg-blue-500 border border-white rounded-full pointer-events-auto cursor-ew-resize"
+                                      style={{
+                                          top: dir.includes('n') ? -4 : 'auto',
+                                          bottom: dir.includes('s') ? -4 : 'auto',
+                                          left: dir.includes('w') ? -4 : 'auto',
+                                          right: dir.includes('e') ? -4 : 'auto',
+                                      }}
+                                      onMouseDown={(e) => handleResizeStart(e, dir)}
+                                  ></div>
+                              ))}
+                          </div>
+                      )}
+                  </div>
+              </div>
 
-                     {/* Image Resizing Overlay */}
-                     {selectedImg && (
-                         <div 
-                            className="absolute border-2 border-blue-500 pointer-events-none z-10"
-                            style={{
-                                top: overlayPos.top,
-                                left: overlayPos.left,
-                                width: overlayPos.width,
-                                height: overlayPos.height
-                            }}
-                         >
-                             <div className="absolute -top-3 -right-3 w-6 h-6 bg-blue-500 rounded-full cursor-pointer pointer-events-auto flex items-center justify-center text-white" onClick={handleDeleteImage} title="Xóa ảnh"><X className="w-3 h-3"/></div>
-                             {/* Resize Handles */}
-                             <div className="absolute top-1/2 -right-2 w-4 h-4 bg-white border border-blue-500 rounded-full cursor-ew-resize pointer-events-auto" onMouseDown={(e) => handleResizeStart(e, 'e')}></div>
-                             <div className="absolute top-1/2 -left-2 w-4 h-4 bg-white border border-blue-500 rounded-full cursor-ew-resize pointer-events-auto" onMouseDown={(e) => handleResizeStart(e, 'w')}></div>
-                             
-                             {/* Alignment Toolbar */}
-                             <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 bg-white shadow-lg rounded-lg flex p-1 pointer-events-auto border border-gray-200">
-                                 <button onClick={() => handleAlignImage('left')} className="p-1 hover:bg-gray-100 rounded"><AlignLeft className="w-4 h-4"/></button>
-                                 <button onClick={() => handleAlignImage('center')} className="p-1 hover:bg-gray-100 rounded"><AlignCenter className="w-4 h-4"/></button>
-                                 <button onClick={() => handleAlignImage('right')} className="p-1 hover:bg-gray-100 rounded"><AlignRight className="w-4 h-4"/></button>
-                             </div>
-                         </div>
-                     )}
-                 </div>
-            </div>
+              {/* Sidebar Settings */}
+              <div className="w-80 border-l border-gray-200 bg-gray-50 p-6 overflow-y-auto custom-scrollbar">
+                  <div className="space-y-6">
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Thông tin cơ bản</label>
+                          <div className="space-y-3">
+                              {activeTab === 'articles' ? (
+                                  <>
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block">Tác giả</label>
+                                        <input type="text" value={editorAuthor} onChange={(e) => setEditorAuthor(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block">Ngày đăng</label>
+                                        <input type="date" value={editorDate} onChange={(e) => setEditorDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm"/>
+                                    </div>
+                                  </>
+                              ) : (
+                                  <>
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block">Năm / Giai đoạn</label>
+                                        <input type="text" value={editorYear} onChange={(e) => setEditorYear(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm" placeholder="VD: 1975"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block">Phụ đề (Subtitle)</label>
+                                        <input type="text" value={editorSubtitle} onChange={(e) => setEditorSubtitle(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm" placeholder="VD: Đại thắng mùa xuân"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs text-gray-500 mb-1 block">Biểu tượng (Icon)</label>
+                                        <select value={editorIcon} onChange={(e) => setEditorIcon(e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm">
+                                            <option value="Flag">Cờ (Flag)</option>
+                                            <option value="Map">Bản đồ (Map)</option>
+                                            <option value="Star">Sao (Star)</option>
+                                            <option value="Award">Huân chương (Award)</option>
+                                        </select>
+                                    </div>
+                                    <div className="bg-yellow-50 p-3 rounded border border-yellow-200 text-xs text-yellow-800">
+                                        <strong>Mẹo viết sách:</strong> Sử dụng nút <span className="inline-flex items-center font-bold"><Scissors className="w-3 h-3 mx-1"/> Ngắt trang</span> trên thanh công cụ để chia nội dung sang trang tiếp theo.
+                                    </div>
+                                  </>
+                              )}
+                          </div>
+                      </div>
 
-            {/* Sidebar Settings */}
-            <div className="w-full lg:w-80 bg-gray-50 p-6 border-t lg:border-t-0 lg:border-l border-gray-200 overflow-y-auto">
-                 <h3 className="font-bold text-gray-700 mb-4 uppercase text-xs tracking-wider">Cài đặt bài viết</h3>
-                 
-                 <div className="space-y-4">
-                     <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh đại diện</label>
-                         <div className="flex space-x-2 mb-2 text-xs">
-                             <button onClick={() => setFeaturedImgSourceType('link')} className={`px-2 py-1 rounded ${featuredImgSourceType === 'link' ? 'bg-green-600 text-white' : 'bg-gray-200'}`}>Link</button>
-                             <button onClick={() => setFeaturedImgSourceType('upload')} className={`px-2 py-1 rounded ${featuredImgSourceType === 'upload' ? 'bg-green-600 text-white' : 'bg-gray-200'}`}>Upload</button>
-                         </div>
-                         
-                         {featuredImgSourceType === 'link' ? (
-                             <input 
-                                type="text" 
-                                className="w-full p-2 border border-gray-300 rounded text-sm" 
-                                placeholder="https://..." 
-                                value={editorImage}
-                                onChange={(e) => setEditorImage(e.target.value)}
-                             />
-                         ) : (
-                             <div 
-                                onClick={handleFeaturedImageClick}
-                                className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-green-500 hover:bg-green-50 transition-colors overflow-hidden relative"
-                             >
-                                 {editorImage && editorImage.startsWith('data:') ? (
-                                     <img src={editorImage} className="w-full h-full object-cover" alt="Preview"/>
-                                 ) : (
-                                     <div className="text-center text-gray-400">
-                                         <Upload className="w-6 h-6 mx-auto mb-1"/>
-                                         <span className="text-xs">Chọn ảnh</span>
-                                     </div>
-                                 )}
-                                 <input type="file" ref={featuredImageInputRef} className="hidden" accept="image/*" onChange={handleFeaturedImageChange} />
-                             </div>
-                         )}
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Ảnh đại diện</label>
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-white hover:bg-gray-50 transition-colors cursor-pointer" onClick={handleFeaturedImageClick}>
+                              {editorImage ? (
+                                  <div className="relative group">
+                                      <img src={editorImage} alt="Featured" className="w-full h-32 object-cover rounded" />
+                                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded">
+                                          <span className="text-white text-xs font-bold">Thay đổi</span>
+                                      </div>
+                                  </div>
+                              ) : (
+                                  <div className="py-4">
+                                      <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                      <span className="text-xs text-gray-500">Tải ảnh lên</span>
+                                  </div>
+                              )}
+                              <input type="file" ref={featuredImageInputRef} className="hidden" accept="image/*" onChange={handleFeaturedImageChange} />
+                          </div>
+                      </div>
 
-                         {editorImage && featuredImgSourceType === 'link' && (
-                             <div className="mt-2 rounded-lg overflow-hidden h-32 border border-gray-200">
-                                 <img src={editorImage} className="w-full h-full object-cover" alt="Preview"/>
-                             </div>
-                         )}
-                     </div>
-
-                     <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-1">Tác giả</label>
-                         <div className="relative">
-                             <UserIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"/>
-                             <input 
-                                type="text" 
-                                className="w-full pl-8 p-2 border border-gray-300 rounded text-sm" 
-                                value={editorAuthor}
-                                onChange={(e) => setEditorAuthor(e.target.value)}
-                             />
-                         </div>
-                     </div>
-
-                     <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-1">Ngày đăng</label>
-                         <div className="relative">
-                             <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"/>
-                             <input 
-                                type="date" 
-                                className="w-full pl-8 p-2 border border-gray-300 rounded text-sm" 
-                                value={editorDate}
-                                onChange={(e) => setEditorDate(e.target.value)}
-                             />
-                         </div>
-                     </div>
-                 </div>
-            </div>
-        </div>
-    </div>
+                      <div>
+                          <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
+                              {activeTab === 'articles' ? 'Tóm tắt (Sapo)' : 'Mô tả ngắn (Timeline)'}
+                          </label>
+                          <textarea 
+                              rows={5} 
+                              value={editorSummary} 
+                              onChange={(e) => setEditorSummary(e.target.value)} 
+                              className="w-full p-2 border border-gray-300 rounded text-sm text-gray-600 leading-relaxed"
+                              placeholder={activeTab === 'articles' ? "Mô tả ngắn về bài viết..." : "Nội dung hiển thị trên timeline (ngắn gọn)..."}
+                          ></textarea>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
   );
 
   const renderModal = () => {
-    if (!isModalOpen) return null;
+      // Reuse existing generic modal for non-editor items
+      if (!isModalOpen) return null;
+      // ... (Same modal code logic as previous turn, ensuring `activeTab === 'history'` is NOT handled here because it uses the Editor)
+      const titles: Record<string, string> = {
+          personnel: editingItem ? 'Chỉnh sửa thành viên' : 'Thêm thành viên mới',
+          scores: editingItem ? 'Cập nhật điểm thi đua' : 'Chấm điểm mới',
+          documents: editingItem ? 'Đổi tên' : 'Tải lên / Tạo mới',
+          media: editingItem ? 'Chỉnh sửa Media' : 'Thêm Media mới',
+          leaders: editingItem ? 'Chỉnh sửa thông tin' : 'Thêm cán bộ mới',
+          questions: editingItem ? 'Chỉnh sửa câu hỏi' : 'Thêm câu hỏi mới'
+      };
 
-    const titles: Record<string, string> = {
-        personnel: editingItem ? 'Chỉnh sửa thành viên' : 'Thêm thành viên mới',
-        questions: editingItem ? 'Chỉnh sửa câu hỏi' : 'Thêm câu hỏi mới',
-        scores: editingItem ? 'Chỉnh sửa điểm thi đua' : 'Chấm điểm mới',
-        documents: editingItem ? 'Chỉnh sửa tài liệu' : 'Thêm tài liệu mới', // Document creation usually handled by upload
-        media: editingItem ? 'Chỉnh sửa Media' : 'Thêm Media mới',
-        leaders: editingItem ? 'Chỉnh sửa Ban Chỉ huy' : 'Thêm Chỉ huy mới'
-    };
+      return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-up">
+                  <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                      <h3 className="font-bold text-gray-800">{titles[activeTab] || 'Thao tác'}</h3>
+                      <button onClick={() => { setIsModalOpen(false); setEditingItem(null); }} className="text-gray-400 hover:text-gray-600">
+                          <X className="w-5 h-5" />
+                      </button>
+                  </div>
+                  
+                  <form onSubmit={handleGenericSave} className="p-6">
+                      <div className="space-y-4 max-h-[70vh] overflow-y-auto custom-scrollbar px-1">
+                          
+                          {/* DYNAMIC FORM FIELDS BASED ON TAB */}
+                          
+                          {activeTab === 'personnel' && (
+                              <>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Họ và tên</label>
+                                      <input name="name" type="text" defaultValue={editingItem?.name} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Email</label>
+                                      <input name="email" type="email" defaultValue={editingItem?.email} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                          <label className="block text-sm font-bold text-gray-700 mb-1">Cấp bậc</label>
+                                          <input name="rank" type="text" defaultValue={editingItem?.rank} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                      </div>
+                                      <div>
+                                          <label className="block text-sm font-bold text-gray-700 mb-1">Chức vụ</label>
+                                          <input name="position" type="text" defaultValue={editingItem?.position} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                      </div>
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Đơn vị</label>
+                                      <input name="unit" type="text" defaultValue={editingItem?.unit} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Mật khẩu {editingItem && <span className="text-gray-400 font-normal">(Để trống nếu không đổi)</span>}</label>
+                                      <input name="password" type="password" required={!editingItem} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Quyền hạn</label>
+                                      <select name="role" defaultValue={editingItem?.role || 'user'} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500">
+                                          <option value="user">Người dùng (User)</option>
+                                          <option value="admin">Quản trị viên (Admin)</option>
+                                      </select>
+                                  </div>
+                              </>
+                          )}
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
-                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 className="text-lg font-bold text-gray-800">{titles[activeTab] || 'Thông tin'}</h3>
-                    <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-600">
-                        <X className="w-6 h-6" />
-                    </button>
-                </div>
-                
-                <div className="p-6 overflow-y-auto">
-                    <form id="modalForm" onSubmit={handleGenericSave} className="space-y-4">
-                        {activeTab === 'personnel' && (
-                            <>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
-                                        <input name="name" type="text" required defaultValue={editingItem?.name} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email (Đăng nhập)</label>
-                                        <input name="email" type="email" required defaultValue={editingItem?.email} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Cấp bậc</label>
-                                        <input name="rank" type="text" required defaultValue={editingItem?.rank} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Chức vụ</label>
-                                        <input name="position" type="text" required defaultValue={editingItem?.position} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Đơn vị</label>
-                                    <input name="unit" type="text" defaultValue={editingItem?.unit} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Mật khẩu {editingItem && '(Để trống nếu không đổi)'}</label>
-                                        <input name="password" type="password" required={!editingItem} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Phân quyền</label>
-                                        <select name="role" defaultValue={editingItem?.role || 'user'} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500">
-                                            <option value="user">Người dùng</option>
-                                            <option value="admin">Quản trị viên</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </>
-                        )}
+                          {/* ... Other cases (scores, documents, media, leaders, questions) remain exactly as before ... */}
+                          {activeTab === 'scores' && (
+                              <>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Tên đơn vị</label>
+                                      <input name="unitName" type="text" defaultValue={editingItem?.unitName} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-4">
+                                      <div>
+                                          <label className="block text-sm font-bold text-gray-700 mb-1">Quân sự</label>
+                                          <input name="militaryScore" type="number" step="0.1" max="10" defaultValue={editingItem?.militaryScore} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                      </div>
+                                      <div>
+                                          <label className="block text-sm font-bold text-gray-700 mb-1">Chính trị</label>
+                                          <input name="politicalScore" type="number" step="0.1" max="10" defaultValue={editingItem?.politicalScore} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                      </div>
+                                      <div>
+                                          <label className="block text-sm font-bold text-gray-700 mb-1">Hậu cần</label>
+                                          <input name="logisticsScore" type="number" step="0.1" max="10" defaultValue={editingItem?.logisticsScore} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                      </div>
+                                      <div>
+                                          <label className="block text-sm font-bold text-gray-700 mb-1">Kỹ thuật / Chính quy</label>
+                                          <input name="disciplineScore" type="number" step="0.1" max="10" defaultValue={editingItem?.disciplineScore} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                      </div>
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Ngày chấm</label>
+                                      <input name="date" type="date" defaultValue={editingItem?.date || new Date().toISOString().split('T')[0]} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                              </>
+                          )}
 
-                        {activeTab === 'questions' && (
-                            <>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nội dung câu hỏi</label>
-                                    <textarea name="questionText" required rows={3} defaultValue={editingItem?.questionText} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"></textarea>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Các lựa chọn (Mỗi dòng 1 lựa chọn)</label>
-                                    <textarea name="options" required rows={4} defaultValue={editingItem?.options?.join('\n')} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500 font-mono text-sm"></textarea>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Đáp án đúng (Index 0-3)</label>
-                                    <select name="correctAnswerIndex" defaultValue={editingItem?.correctAnswerIndex || 0} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500">
-                                        <option value="0">Đáp án A (Dòng 1)</option>
-                                        <option value="1">Đáp án B (Dòng 2)</option>
-                                        <option value="2">Đáp án C (Dòng 3)</option>
-                                        <option value="3">Đáp án D (Dòng 4)</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Giải thích đáp án</label>
-                                    <textarea name="explanation" rows={2} defaultValue={editingItem?.explanation} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"></textarea>
-                                </div>
-                            </>
-                        )}
+                          {activeTab === 'documents' && (
+                              <>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Tên tệp / Thư mục</label>
+                                      <input name="name" type="text" defaultValue={editingItem?.name} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                              </>
+                          )}
 
-                        {activeTab === 'scores' && (
-                            <>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Đơn vị được chấm</label>
-                                    <input name="unitName" type="text" required defaultValue={editingItem?.unitName} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Điểm Quân sự</label>
-                                        <input name="militaryScore" type="number" step="0.1" min="0" max="10" required defaultValue={editingItem?.militaryScore} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Điểm Chính trị</label>
-                                        <input name="politicalScore" type="number" step="0.1" min="0" max="10" required defaultValue={editingItem?.politicalScore} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Điểm Hậu cần</label>
-                                        <input name="logisticsScore" type="number" step="0.1" min="0" max="10" required defaultValue={editingItem?.logisticsScore} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Điểm Xây dựng chính quy</label>
-                                        <input name="disciplineScore" type="number" step="0.1" min="0" max="10" required defaultValue={editingItem?.disciplineScore} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Ngày chấm</label>
-                                    <input name="date" type="date" required defaultValue={editingItem?.date || new Date().toISOString().split('T')[0]} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                </div>
-                            </>
-                        )}
-                        
-                        {activeTab === 'documents' && (
-                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Tên tài liệu / Thư mục</label>
-                                <input name="name" type="text" required defaultValue={editingItem?.name} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                            </div>
-                        )}
+                          {activeTab === 'media' && (
+                              <>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Tiêu đề</label>
+                                      <input name="title" type="text" defaultValue={editingItem?.title} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Loại</label>
+                                      <select name="type" defaultValue={editingItem?.type || 'video'} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500">
+                                          <option value="video">Video</option>
+                                          <option value="audio">Audio</option>
+                                      </select>
+                                  </div>
+                                  {/* Source inputs logic repeated from before */}
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Nguồn Media</label>
+                                      <div className="flex space-x-4 mb-2">
+                                          <label className="flex items-center space-x-2 cursor-pointer">
+                                              <input type="radio" name="mediaSource" checked={mediaSourceType === 'link'} onChange={() => setMediaSourceType('link')} />
+                                              <span className="text-sm">Đường dẫn (URL/Youtube)</span>
+                                          </label>
+                                          <label className="flex items-center space-x-2 cursor-pointer">
+                                              <input type="radio" name="mediaSource" checked={mediaSourceType === 'upload'} onChange={() => setMediaSourceType('upload')} />
+                                              <span className="text-sm">Tải lên file</span>
+                                          </label>
+                                      </div>
+                                      {mediaSourceType === 'link' ? (
+                                          <input name="url" type="text" defaultValue={editingItem?.url} placeholder="https://youtube.com/..." className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                      ) : (
+                                          <input name="fileUpload" type="file" accept="video/*,audio/*" className="w-full p-2 border border-gray-300 rounded" />
+                                      )}
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Mô tả</label>
+                                      <textarea name="description" rows={2} defaultValue={editingItem?.description} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Ảnh thu nhỏ (Thumbnail)</label>
+                                      <div className="flex space-x-4 mb-2">
+                                          <label className="flex items-center space-x-2 cursor-pointer">
+                                              <input type="radio" name="thumbSource" checked={mediaThumbSourceType === 'link'} onChange={() => setMediaThumbSourceType('link')} />
+                                              <span className="text-sm">URL ảnh</span>
+                                          </label>
+                                          <label className="flex items-center space-x-2 cursor-pointer">
+                                              <input type="radio" name="thumbSource" checked={mediaThumbSourceType === 'upload'} onChange={() => setMediaThumbSourceType('upload')} />
+                                              <span className="text-sm">Tải lên ảnh</span>
+                                          </label>
+                                      </div>
+                                      {mediaThumbSourceType === 'link' ? (
+                                          <input name="thumbnail" type="text" defaultValue={editingItem?.thumbnail} placeholder="https://..." className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                      ) : (
+                                          <input name="thumbnailUpload" type="file" accept="image/*" className="w-full p-2 border border-gray-300 rounded" />
+                                      )}
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Ngày đăng</label>
+                                      <input name="date" type="date" defaultValue={editingItem?.date || new Date().toISOString().split('T')[0]} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                              </>
+                          )}
+                          
+                          {activeTab === 'leaders' && (
+                              <>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Họ và tên</label>
+                                      <input name="name" type="text" defaultValue={editingItem?.name} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Chức vụ</label>
+                                      <input name="role" type="text" defaultValue={editingItem?.role} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Hình ảnh</label>
+                                      <div className="flex space-x-4 mb-2">
+                                          <label className="flex items-center space-x-2 cursor-pointer">
+                                              <input type="radio" name="imageSource" checked={mediaSourceType === 'link'} onChange={() => setMediaSourceType('link')} />
+                                              <span className="text-sm">URL ảnh</span>
+                                          </label>
+                                          <label className="flex items-center space-x-2 cursor-pointer">
+                                              <input type="radio" name="imageSource" checked={mediaSourceType === 'upload'} onChange={() => setMediaSourceType('upload')} />
+                                              <span className="text-sm">Tải lên ảnh</span>
+                                          </label>
+                                      </div>
+                                      {mediaSourceType === 'link' ? (
+                                          <input name="image" type="text" defaultValue={editingItem?.image} placeholder="https://..." className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                      ) : (
+                                          <input name="imageUpload" type="file" accept="image/*" className="w-full p-2 border border-gray-300 rounded" />
+                                      )}
+                                  </div>
+                              </>
+                          )}
 
-                        {activeTab === 'media' && (
-                             <>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Tiêu đề Media</label>
-                                    <input name="title" type="text" required defaultValue={editingItem?.title} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Loại</label>
-                                        <select name="type" defaultValue={editingItem?.type || 'video'} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500">
-                                            <option value="video">Video</option>
-                                            <option value="audio">Âm thanh</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Ngày đăng</label>
-                                        <input name="date" type="date" required defaultValue={editingItem?.date || new Date().toISOString().split('T')[0]} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                    </div>
-                                </div>
-                                
-                                {/* URL Selection */}
-                                <div>
-                                     <label className="block text-sm font-medium text-gray-700 mb-1">Nguồn Media</label>
-                                     <div className="flex space-x-2 mb-2 text-xs">
-                                         <button type="button" onClick={() => setMediaSourceType('link')} className={`px-2 py-1 rounded ${mediaSourceType === 'link' ? 'bg-green-600 text-white' : 'bg-gray-200'}`}>Link URL</button>
-                                         <button type="button" onClick={() => setMediaSourceType('upload')} className={`px-2 py-1 rounded ${mediaSourceType === 'upload' ? 'bg-green-600 text-white' : 'bg-gray-200'}`}>Upload File</button>
-                                     </div>
-                                     
-                                     {mediaSourceType === 'link' ? (
-                                         <input name="url" type="text" placeholder="https://youtube.com/..." defaultValue={editingItem?.url} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                     ) : (
-                                         <input name="fileUpload" type="file" accept="video/*,audio/*" className="w-full p-2 border border-gray-300 rounded" />
-                                     )}
-                                </div>
+                          {activeTab === 'questions' && (
+                              <>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Nội dung câu hỏi</label>
+                                      <textarea name="questionText" rows={3} defaultValue={editingItem?.questionText} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Các lựa chọn (Mỗi dòng một lựa chọn)</label>
+                                      <textarea name="options" rows={4} defaultValue={editingItem?.options?.join('\n')} required className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" placeholder="Lựa chọn A&#10;Lựa chọn B&#10;Lựa chọn C&#10;Lựa chọn D" />
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Đáp án đúng (Index 0-3)</label>
+                                      <select name="correctAnswerIndex" defaultValue={editingItem?.correctAnswerIndex || 0} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500">
+                                          <option value={0}>Lựa chọn A (Dòng 1)</option>
+                                          <option value={1}>Lựa chọn B (Dòng 2)</option>
+                                          <option value={2}>Lựa chọn C (Dòng 3)</option>
+                                          <option value={3}>Lựa chọn D (Dòng 4)</option>
+                                      </select>
+                                  </div>
+                                  <div>
+                                      <label className="block text-sm font-bold text-gray-700 mb-1">Giải thích đáp án</label>
+                                      <textarea name="explanation" rows={2} defaultValue={editingItem?.explanation} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
+                                  </div>
+                              </>
+                          )}
 
-                                {/* Thumbnail Selection */}
-                                <div>
-                                     <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail (Cho Video)</label>
-                                     <div className="flex space-x-2 mb-2 text-xs">
-                                         <button type="button" onClick={() => setMediaThumbSourceType('link')} className={`px-2 py-1 rounded ${mediaThumbSourceType === 'link' ? 'bg-green-600 text-white' : 'bg-gray-200'}`}>Link URL</button>
-                                         <button type="button" onClick={() => setMediaThumbSourceType('upload')} className={`px-2 py-1 rounded ${mediaThumbSourceType === 'upload' ? 'bg-green-600 text-white' : 'bg-gray-200'}`}>Upload Ảnh</button>
-                                     </div>
-                                     
-                                     {mediaThumbSourceType === 'link' ? (
-                                         <input name="thumbnail" type="text" placeholder="https://..." defaultValue={editingItem?.thumbnail} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                     ) : (
-                                         <input name="thumbnailUpload" type="file" accept="image/*" className="w-full p-2 border border-gray-300 rounded" />
-                                     )}
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
-                                    <textarea name="description" rows={3} defaultValue={editingItem?.description} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"></textarea>
-                                </div>
-                             </>
-                        )}
-
-                        {activeTab === 'leaders' && (
-                            <>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
-                                    <input name="name" type="text" required defaultValue={editingItem?.name} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Chức vụ</label>
-                                    <input name="role" type="text" required defaultValue={editingItem?.role} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                </div>
-                                
-                                {/* Image Selection */}
-                                <div>
-                                     <label className="block text-sm font-medium text-gray-700 mb-1">Ảnh Chân Dung</label>
-                                     <div className="flex space-x-2 mb-2 text-xs">
-                                         <button type="button" onClick={() => setMediaSourceType('link')} className={`px-2 py-1 rounded ${mediaSourceType === 'link' ? 'bg-green-600 text-white' : 'bg-gray-200'}`}>Link URL</button>
-                                         <button type="button" onClick={() => setMediaSourceType('upload')} className={`px-2 py-1 rounded ${mediaSourceType === 'upload' ? 'bg-green-600 text-white' : 'bg-gray-200'}`}>Upload File</button>
-                                     </div>
-                                     
-                                     {mediaSourceType === 'link' ? (
-                                         <input name="image" type="text" placeholder="https://..." defaultValue={editingItem?.image} className="w-full p-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500" />
-                                     ) : (
-                                         <input name="imageUpload" type="file" accept="image/*" className="w-full p-2 border border-gray-300 rounded" />
-                                     )}
-                                </div>
-                            </>
-                        )}
-                    </form>
-                </div>
-                
-                <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-200 rounded mr-2">Hủy bỏ</button>
-                    <button type="submit" form="modalForm" className="px-6 py-2 bg-green-700 text-white font-bold rounded shadow-md hover:bg-green-800 transition-colors">
-                        Lưu thông tin
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
+                      </div>
+                      
+                      <div className="flex justify-end mt-6 pt-4 border-t border-gray-200 space-x-3">
+                          <button type="button" onClick={() => { setIsModalOpen(false); setEditingItem(null); }} className="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded-lg">
+                              Hủy bỏ
+                          </button>
+                          <button type="submit" className="px-6 py-2 bg-green-700 text-white font-bold rounded-lg hover:bg-green-800 shadow-lg">
+                              {editingItem ? 'Cập nhật' : 'Thêm mới'}
+                          </button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      );
   };
 
-  // --- RENDER SIDEBAR ---
   const renderSidebar = () => (
     <div className="w-64 bg-green-900 text-white min-h-screen flex flex-col fixed left-0 top-0 bottom-0 shadow-2xl border-r border-green-800 z-10">
         <div className="p-6 bg-green-950 font-bold text-center text-xl border-b border-green-800 flex items-center justify-center space-x-2">
@@ -1330,18 +1548,20 @@ const AdminDashboard: React.FC = () => {
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar">
             {[
                 { id: 'articles', label: 'Bài viết', icon: FileText },
+                { id: 'history', label: 'Lịch sử truyền thống', icon: Clock },
                 { id: 'personnel', label: 'Người dùng & Phân quyền', icon: Users },
                 { id: 'leaders', label: 'Ban Chỉ huy', icon: Briefcase },
                 { id: 'media', label: 'Thư viện Media', icon: Film },
                 { id: 'questions', label: 'Kho câu hỏi', icon: HelpCircle },
                 { id: 'scores', label: 'Thi đua', icon: Award },
                 { id: 'documents', label: 'Văn bản & Tệp tin', icon: Folder },
+                { id: 'appearance', label: 'Giao diện & Cấu hình', icon: LayoutIcon },
             ].map((item) => (
                 <button
                     key={item.id}
                     onClick={() => {
                         setActiveTab(item.id as Tab);
-                        setViewMode('list'); // Reset view mode when changing tabs
+                        setViewMode('list');
                     }}
                     className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
                         activeTab === item.id 
@@ -1366,25 +1586,28 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  // --- RENDER CONTENT ---
   const renderContent = () => {
-      // If in Editor Mode for Articles
-      if (activeTab === 'articles' && viewMode === 'editor') {
+      if (activeTab === 'appearance') {
+          return renderAppearanceSettings();
+      }
+      
+      if ((activeTab === 'articles' || activeTab === 'history') && viewMode === 'editor') {
           return renderArticleEditor();
       }
 
-      // Normal List View
       const data = filteredData;
       const titles: Record<Tab, string> = {
           articles: 'Quản lý Bài viết',
+          history: 'Lịch sử & Truyền thống',
           personnel: 'Quản lý Người dùng & Phân quyền',
           questions: 'Ngân hàng Câu hỏi',
           scores: 'Chấm điểm Thi đua',
           documents: 'Kho Lưu Trữ Số',
           media: 'Thư viện Đa phương tiện',
-          leaders: 'Ban Chỉ huy Tiểu đoàn'
+          leaders: 'Ban Chỉ huy Tiểu đoàn',
+          appearance: 'Cấu hình Hệ thống'
       };
-
+      
       return (
           <div className="animate-fade-in">
               {/* Header Bar */}
@@ -1421,8 +1644,8 @@ const AdminDashboard: React.FC = () => {
                      {activeTab !== 'documents' && activeTab !== 'questions' && (
                         <button 
                             onClick={() => { 
-                                if (activeTab === 'articles') {
-                                    openArticleEditor();
+                                if (activeTab === 'articles' || activeTab === 'history') {
+                                    openEditor(null, activeTab);
                                 } else {
                                     setEditingItem(null); 
                                     setIsModalOpen(true); 
@@ -1470,7 +1693,7 @@ const AdminDashboard: React.FC = () => {
                                     <YAxis domain={[0, 10]} axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 11}} />
                                     <Tooltip cursor={{fill: '#f0fdf4'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}} formatter={(value: number) => [`${value} điểm`, timeFilter === 'day' ? 'Tổng kết' : 'Trung bình']} />
                                     <Bar dataKey="score" radius={[6, 6, 0, 0]} barSize={40}>
-                                        {chartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={index % 2 === 0 ? '#15803d' : '#ca8a04'} />))}
+                                        {chartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={index % 2 === 0 ? settings.primaryColor || '#15803d' : settings.secondaryColor || '#ca8a04'} />))}
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
@@ -1550,6 +1773,13 @@ const AdminDashboard: React.FC = () => {
                                     <th className="px-6 py-4 text-left text-xs font-bold text-green-800 uppercase tracking-wider">Ngày</th>
                                 </>
                               )}
+                              {activeTab === 'history' && (
+                                <>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-green-800 uppercase tracking-wider">Năm</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-green-800 uppercase tracking-wider">Tiêu đề / Sự kiện</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-green-800 uppercase tracking-wider">Mô tả ngắn</th>
+                                </>
+                              )}
                               {activeTab === 'personnel' && (
                                 <>
                                     <th className="px-6 py-4 text-left text-xs font-bold text-green-800 uppercase tracking-wider">Thành viên</th>
@@ -1623,6 +1853,16 @@ const AdminDashboard: React.FC = () => {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.author}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.date}</td>
+                                    </>
+                                  )}
+                                  {activeTab === 'history' && (
+                                    <>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-green-900">{item.year}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800 flex items-center">
+                                            {item.image && <img src={item.image} className="w-8 h-8 rounded-full object-cover mr-3 border border-gray-200" alt=""/>}
+                                            {item.title}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500 line-clamp-1 max-w-xs">{item.subtitle}</td>
                                     </>
                                   )}
                                   {activeTab === 'personnel' && (
@@ -1737,8 +1977,8 @@ const AdminDashboard: React.FC = () => {
                                       <button 
                                         onClick={(e) => { 
                                             e.stopPropagation();
-                                            if (activeTab === 'articles') {
-                                                openArticleEditor(item);
+                                            if (activeTab === 'articles' || activeTab === 'history') {
+                                                openEditor(item, activeTab);
                                             } else {
                                                 setEditingItem(item); 
                                                 setIsModalOpen(true); 
@@ -1772,15 +2012,6 @@ const AdminDashboard: React.FC = () => {
                           )}
                       </tbody>
                   </table>
-              </div>
-              
-              {/* Pagination Mock */}
-              <div className="flex items-center justify-between mt-4 px-4">
-                  <div className="text-sm text-gray-500">Đang xem 1 đến {data.length} trên tổng số {data.length} bản ghi</div>
-                  <div className="flex space-x-2">
-                      <button className="p-2 border rounded-md hover:bg-gray-100 disabled:opacity-50" disabled><ChevronLeft className="h-4 w-4"/></button>
-                      <button className="p-2 border rounded-md hover:bg-gray-100 disabled:opacity-50" disabled><ChevronRight className="h-4 w-4"/></button>
-                  </div>
               </div>
           </div>
       );

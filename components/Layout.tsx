@@ -2,6 +2,7 @@ import React from 'react';
 import { Shield, Menu, X, User as UserIcon, LogOut, LogIn } from 'lucide-react';
 import { Link, useLocation, useNavigate } from '../context/AuthContext';
 import { useAuth } from '../context/AuthContext';
+import { useSiteSettings } from '../context/SiteContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { settings } = useSiteSettings();
 
   const navigation = [
     { name: 'Trang chủ', path: '/' },
@@ -33,37 +35,64 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header / Navbar - Gradient Background using Palette #1E2F23 and #34623F */}
-      <header className="bg-gradient-to-r from-green-900 via-green-700 to-green-900 text-white shadow-xl sticky top-0 z-50 border-b-4 border-yellow-500">
+      {/* Header / Navbar - Use Dynamic Color from Settings */}
+      <header 
+          className="text-white shadow-xl sticky top-0 z-50 border-b-4"
+          style={{ 
+              background: settings.primaryColor || '#14532d', // Default green-900 if empty
+              borderColor: settings.secondaryColor || '#eab308' // Default yellow-500 if empty
+          }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-4 group">
               <div className="relative">
-                 <div className="absolute inset-0 bg-yellow-500 blur-sm opacity-50 rounded-full group-hover:opacity-75 transition-opacity"></div>
-                 <Shield className="relative h-10 w-10 text-yellow-500 drop-shadow-md" />
+                 <div 
+                    className="absolute inset-0 blur-sm opacity-50 rounded-full group-hover:opacity-75 transition-opacity"
+                    style={{ background: settings.secondaryColor || '#eab308' }}
+                 ></div>
+                 {settings.logoUrl ? (
+                     <img src={settings.logoUrl} alt="Logo" className="relative h-12 w-12 object-contain drop-shadow-md"/>
+                 ) : (
+                     <Shield className="relative h-10 w-10 text-yellow-500 drop-shadow-md" style={{ color: settings.secondaryColor || '#eab308' }} />
+                 )}
               </div>
               <div className="flex flex-col">
-                <span className="font-serif font-bold text-xl uppercase leading-none tracking-wide text-white group-hover:text-yellow-200 transition-colors">Tiểu đoàn 15</span>
-                <span className="text-xs text-yellow-500 font-bold uppercase tracking-widest mt-1">Sư đoàn 324 - Quân Khu 4</span>
+                <span className="font-serif font-bold text-xl uppercase leading-none tracking-wide text-white group-hover:text-yellow-200 transition-colors">
+                    {settings.siteTitle}
+                </span>
+                <span className="text-xs font-bold uppercase tracking-widest mt-1" style={{ color: settings.secondaryColor || '#eab308' }}>
+                    {settings.siteSubtitle}
+                </span>
               </div>
             </Link>
 
             {/* Desktop Menu */}
             <nav className="hidden md:flex space-x-1 items-center">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wide transition-all duration-300 ${
-                    isActive(item.path)
-                      ? 'bg-yellow-500 text-green-900 shadow-lg transform -translate-y-0.5'
-                      : 'text-gray-100 hover:bg-white/10 hover:text-yellow-500'
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
+              {navigation.map((item) => {
+                const active = isActive(item.path);
+                const activeStyle = active ? {
+                    backgroundColor: settings.secondaryColor || '#eab308',
+                    color: settings.primaryColor || '#14532d',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                } : {};
+                
+                return (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      style={activeStyle}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wide transition-all duration-300 ${
+                        active
+                          ? 'transform -translate-y-0.5'
+                          : 'text-gray-100 hover:bg-white/10'
+                      }`}
+                    >
+                      {item.name}
+                    </Link>
+                );
+              })}
 
               {user?.role === 'admin' && (
                 <Link
@@ -74,13 +103,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </Link>
               )}
 
-              <div className="h-8 w-px bg-green-500 mx-4"></div>
+              <div className="h-8 w-px bg-white/20 mx-4"></div>
 
               {user ? (
-                <div className="flex items-center space-x-4 bg-green-800/50 px-4 py-1.5 rounded-full border border-green-600">
+                <div className="flex items-center space-x-4 bg-black/20 px-4 py-1.5 rounded-full border border-white/10">
                     <div className="flex items-center space-x-2">
-                        <UserIcon className="h-4 w-4 text-yellow-500" />
-                        <span className="text-sm font-medium text-yellow-100">{user.name}</span>
+                        <UserIcon className="h-4 w-4" style={{ color: settings.secondaryColor || '#eab308' }} />
+                        <span className="text-sm font-medium text-white">{user.name}</span>
                     </div>
                     <button 
                         onClick={handleLogout}
@@ -91,7 +120,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </button>
                 </div>
               ) : (
-                 <Link to="/login" className="flex items-center space-x-2 bg-white/10 text-white px-5 py-2 rounded-full font-bold hover:bg-yellow-500 hover:text-green-900 transition-all text-sm border border-yellow-500/30">
+                 <Link 
+                    to="/login" 
+                    className="flex items-center space-x-2 bg-white/10 text-white px-5 py-2 rounded-full font-bold transition-all text-sm border hover:bg-white/20"
+                    style={{ borderColor: settings.secondaryColor || '#eab308' }}
+                 >
                     <LogIn className="h-4 w-4" />
                     <span>Đăng nhập</span>
                  </Link>
@@ -112,27 +145,34 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* Mobile Menu Dropdown */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-green-900 border-t border-green-700 absolute w-full z-50 shadow-xl">
+          <div 
+             className="md:hidden absolute w-full z-50 shadow-xl border-t border-white/10"
+             style={{ background: settings.primaryColor || '#14532d' }}
+          >
             <div className="px-4 pt-4 pb-6 space-y-2">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`block px-4 py-3 rounded-lg text-base font-bold uppercase ${
-                     isActive(item.path)
-                      ? 'bg-yellow-500 text-green-900'
-                      : 'text-gray-100 hover:bg-white/10'
-                  }`}
-                >
-                  {item.name}
-                </Link>
-              ))}
+              {navigation.map((item) => {
+                  const active = isActive(item.path);
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={`block px-4 py-3 rounded-lg text-base font-bold uppercase ${
+                         active
+                          ? 'text-green-900'
+                          : 'text-gray-100 hover:bg-white/10'
+                      }`}
+                      style={active ? { backgroundColor: settings.secondaryColor || '#eab308' } : {}}
+                    >
+                      {item.name}
+                    </Link>
+                  );
+              })}
               
-              <div className="border-t border-green-700 my-4 pt-4">
+              <div className="border-t border-white/10 my-4 pt-4">
                   {user ? (
                       <div className="space-y-3">
-                        <div className="px-4 py-2 bg-green-800 rounded-lg text-yellow-500 text-sm font-bold flex items-center">
+                        <div className="px-4 py-2 bg-black/20 rounded-lg text-white text-sm font-bold flex items-center">
                             <UserIcon className="h-4 w-4 mr-2" /> {user.name}
                         </div>
                         <button
@@ -149,7 +189,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       <Link 
                         to="/login"
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="block w-full text-center px-4 py-3 rounded-lg bg-yellow-500 text-green-900 font-bold uppercase"
+                        className="block w-full text-center px-4 py-3 rounded-lg font-bold uppercase text-green-900"
+                        style={{ backgroundColor: settings.secondaryColor || '#eab308' }}
                       >
                           Đăng nhập
                       </Link>
@@ -165,15 +206,22 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-green-900 text-gray-300 relative border-t border-green-800">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-700 via-yellow-500 to-green-700"></div>
+      {/* Footer - Dynamic */}
+      <footer 
+          className="text-gray-300 relative border-t border-white/10"
+          style={{ background: settings.primaryColor || '#14532d' }}
+      >
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent opacity-50"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             <div>
                 <div className="flex items-center space-x-3 mb-6">
-                     <Shield className="h-8 w-8 text-yellow-500" />
-                     <h3 className="text-white text-lg font-serif font-bold uppercase">Tiểu đoàn 15</h3>
+                     {settings.logoUrl ? (
+                         <img src={settings.logoUrl} alt="Logo" className="h-8 w-8 object-contain"/>
+                     ) : (
+                         <Shield className="h-8 w-8 text-yellow-500" style={{ color: settings.secondaryColor }} />
+                     )}
+                     <h3 className="text-white text-lg font-serif font-bold uppercase">{settings.siteTitle}</h3>
                 </div>
                 <p className="text-sm leading-relaxed text-gray-400">
                 Đơn vị chủ lực, cơ động, sẵn sàng chiến đấu cao. Luôn trung thành tuyệt đối với Đảng, Tổ quốc và Nhân dân. 
@@ -181,7 +229,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </p>
             </div>
             <div>
-                <h3 className="text-white text-lg font-bold mb-6 uppercase border-b border-green-700 pb-2 inline-block">Liên kết nhanh</h3>
+                <h3 className="text-white text-lg font-bold mb-6 uppercase border-b border-white/20 pb-2 inline-block">Liên kết nhanh</h3>
                 <ul className="space-y-3 text-sm">
                 <li><Link to="/history" className="hover:text-yellow-500 flex items-center"><span className="w-1.5 h-1.5 bg-yellow-500 rounded-full mr-2"></span>Lịch sử truyền thống</Link></li>
                 <li><Link to="/quiz" className="hover:text-yellow-500 flex items-center"><span className="w-1.5 h-1.5 bg-yellow-500 rounded-full mr-2"></span>Kiểm tra nhận thức</Link></li>
@@ -189,15 +237,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </ul>
             </div>
             <div>
-                <h3 className="text-white text-lg font-bold mb-6 uppercase border-b border-green-700 pb-2 inline-block">Liên hệ công tác</h3>
-                <p className="text-sm mb-3 flex items-center"><span className="text-green-500 mr-2">📍</span> Quân khu 4, Nghệ An</p>
-                <p className="text-sm mb-3 flex items-center"><span className="text-green-500 mr-2">📧</span> contact@su324.vn</p>
-                <p className="text-sm flex items-center"><span className="text-green-500 mr-2">📞</span> 069.xxxx.xxx</p>
+                <h3 className="text-white text-lg font-bold mb-6 uppercase border-b border-white/20 pb-2 inline-block">Liên hệ công tác</h3>
+                <p className="text-sm mb-3 flex items-center"><span className="text-green-500 mr-2">📍</span> {settings.contactAddress}</p>
+                <p className="text-sm mb-3 flex items-center"><span className="text-green-500 mr-2">📧</span> {settings.contactEmail}</p>
+                <p className="text-sm flex items-center"><span className="text-green-500 mr-2">📞</span> {settings.contactPhone}</p>
             </div>
             </div>
         </div>
         <div className="bg-black/20 py-4 text-center text-xs text-gray-500">
-          &copy; {new Date().getFullYear()} Cổng thông tin điện tử Tiểu đoàn 15 - Sư đoàn 324.
+          &copy; {new Date().getFullYear()} Cổng thông tin điện tử {settings.siteTitle}.
         </div>
       </footer>
     </div>

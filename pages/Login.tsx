@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth, useNavigate, Link } from '../context/AuthContext';
+import { useSiteSettings } from '../context/SiteContext';
 import { Shield, Lock, Mail, X, ArrowRight, User } from 'lucide-react';
 
 const Login: React.FC = () => {
@@ -8,6 +9,7 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { settings } = useSiteSettings();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,11 +31,16 @@ const Login: React.FC = () => {
       {/* Background with Overlay */}
       <div className="absolute inset-0 z-0">
         <img 
-            src="https://picsum.photos/1920/1080?grayscale&blur=2" 
+            src={settings.heroImage || "https://picsum.photos/1920/1080?grayscale&blur=2"} 
             className="w-full h-full object-cover" 
             alt="Background" 
         />
-        <div className="absolute inset-0 bg-gradient-to-br from-green-900/95 via-green-800/90 to-black/80 mix-blend-multiply"></div>
+        <div 
+            className="absolute inset-0 opacity-90 mix-blend-multiply"
+            style={{ 
+                background: `linear-gradient(to bottom right, ${settings.primaryColor}, #000000)`
+            }}
+        ></div>
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
       </div>
 
@@ -51,20 +58,27 @@ const Login: React.FC = () => {
             </Link>
 
             {/* Header */}
-            <div className="bg-gradient-to-r from-green-800 to-green-700 p-8 text-center relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500"></div>
+            <div 
+                className="p-8 text-center relative overflow-hidden"
+                style={{ background: settings.primaryColor }}
+            >
+                <div className="absolute top-0 left-0 w-full h-1" style={{ background: settings.secondaryColor }}></div>
                 <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-                <div className="absolute top-10 -right-10 w-32 h-32 bg-yellow-500/20 rounded-full blur-2xl"></div>
+                <div className="absolute top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
                 
                 <div className="relative z-10 flex flex-col items-center">
-                    <div className="bg-white p-3 rounded-full shadow-lg mb-4 border-2 border-yellow-500">
-                        <Shield className="h-10 w-10 text-green-800" fill="currentColor" fillOpacity={0.2} />
+                    <div className="bg-white p-3 rounded-full shadow-lg mb-4 border-2" style={{ borderColor: settings.secondaryColor }}>
+                        {settings.logoUrl ? (
+                            <img src={settings.logoUrl} className="h-10 w-10 object-contain" alt="Logo" />
+                        ) : (
+                            <Shield className="h-10 w-10" style={{ color: settings.primaryColor }} fill="currentColor" fillOpacity={0.2} />
+                        )}
                     </div>
                     <h2 className="text-2xl font-display font-black text-white uppercase tracking-wider">
                         Đăng Nhập
                     </h2>
-                    <p className="text-green-100 text-sm font-serif italic mt-1">
-                        Cổng thông tin Tiểu đoàn 15
+                    <p className="text-white/80 text-sm font-serif italic mt-1">
+                        Cổng thông tin {settings.siteTitle}
                     </p>
                 </div>
             </div>
@@ -87,12 +101,12 @@ const Login: React.FC = () => {
                     
                     <div className="space-y-4">
                         <div className="relative group">
-                            <label htmlFor="email" className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 group-focus-within:text-green-700 transition-colors">
+                            <label htmlFor="email" className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>
                                 Tài khoản / Email
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-green-600 transition-colors" />
+                                    <Mail className="h-5 w-5 text-gray-400 transition-colors" />
                                 </div>
                                 <input
                                     id="email"
@@ -102,19 +116,20 @@ const Login: React.FC = () => {
                                     required
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm font-medium"
+                                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm font-medium"
+                                    style={{ '--tw-ring-color': settings.primaryColor } as any}
                                     placeholder="Nhap email quan su..."
                                 />
                             </div>
                         </div>
 
                         <div className="relative group">
-                            <label htmlFor="password" className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 group-focus-within:text-green-700 transition-colors">
+                            <label htmlFor="password" className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>
                                 Mật khẩu
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-green-600 transition-colors" />
+                                    <Lock className="h-5 w-5 text-gray-400 transition-colors" />
                                 </div>
                                 <input
                                     id="password"
@@ -124,7 +139,8 @@ const Login: React.FC = () => {
                                     required
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm font-medium"
+                                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm font-medium"
+                                    style={{ '--tw-ring-color': settings.primaryColor } as any}
                                     placeholder="••••••••"
                                 />
                             </div>
@@ -133,15 +149,16 @@ const Login: React.FC = () => {
 
                     <div className="flex items-center justify-between text-sm">
                         <div className="flex items-center">
-                            <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded" />
+                            <input id="remember-me" name="remember-me" type="checkbox" className="h-4 w-4 border-gray-300 rounded" style={{ color: settings.primaryColor }} />
                             <label htmlFor="remember-me" className="ml-2 block text-gray-600">Ghi nhớ</label>
                         </div>
-                        <a href="#" className="font-medium text-green-700 hover:text-green-500">Quên mật khẩu?</a>
+                        <a href="#" className="font-medium hover:underline" style={{ color: settings.primaryColor }}>Quên mật khẩu?</a>
                     </div>
 
                     <button
                         type="submit"
-                        className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-bold text-white bg-gradient-to-r from-green-700 to-green-600 hover:from-green-800 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transform hover:-translate-y-0.5 transition-all uppercase tracking-wide"
+                        className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5 transition-all uppercase tracking-wide"
+                        style={{ backgroundColor: settings.primaryColor }}
                     >
                         Đăng nhập hệ thống <ArrowRight className="ml-2 w-4 h-4" />
                     </button>
@@ -158,7 +175,7 @@ const Login: React.FC = () => {
                     </div>
 
                     <div className="mt-6 flex justify-center">
-                        <Link to="/register" className="flex items-center font-bold text-green-700 hover:text-yellow-600 transition-colors">
+                        <Link to="/register" className="flex items-center font-bold transition-colors" style={{ color: settings.primaryColor }}>
                             <User className="w-4 h-4 mr-2" /> Đăng ký tài khoản mới
                         </Link>
                     </div>
@@ -166,8 +183,8 @@ const Login: React.FC = () => {
             </div>
         </div>
         
-        <p className="text-center text-green-200/60 text-xs mt-6 font-serif">
-            &copy; 2024 Tiểu đoàn 15 - Sư đoàn 324. Bảo mật tuyệt đối.
+        <p className="text-center text-white/60 text-xs mt-6 font-serif">
+            &copy; {new Date().getFullYear()} {settings.siteTitle}. Bảo mật tuyệt đối.
         </p>
       </div>
     </div>

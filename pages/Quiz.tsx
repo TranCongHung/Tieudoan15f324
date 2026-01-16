@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { storage } from '../services/storage';
 import { QuizResult, Question } from '../types';
 import { Trophy, Medal, Calendar, Search, User, Award, Shield, ListFilter, Play, CheckCircle, Clock } from 'lucide-react';
-import { Link } from '../context/AuthContext';
-import { useAuth } from '../context/AuthContext';
+import { Link, useAuth } from '../context/AuthContext';
+import { useSiteSettings } from '../context/SiteContext';
 
 type QuizView = 'leaderboard' | 'start' | 'taking' | 'result';
 
 const Quiz: React.FC = () => {
   const { user } = useAuth();
+  const { settings } = useSiteSettings();
   const [currentView, setCurrentView] = useState<QuizView>('start');
   
   // Leaderboard Data
@@ -134,11 +135,11 @@ const Quiz: React.FC = () => {
 
   // Render Functions for Views
   const renderStartScreen = () => (
-      <div className="bg-white rounded-xl shadow-xl p-8 text-center animate-fade-in-up border-t-8 border-green-700">
-          <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="bg-white rounded-xl shadow-xl p-8 text-center animate-fade-in-up border-t-8" style={{ borderColor: settings.primaryColor }}>
+          <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 bg-yellow-100">
               <Award className="w-12 h-12 text-yellow-600" />
           </div>
-          <h2 className="text-3xl font-display font-bold text-green-900 mb-4">Kiểm Tra Nhận Thức Chính Trị</h2>
+          <h2 className="text-3xl font-display font-bold mb-4" style={{ color: settings.primaryColor }}>Kiểm Tra Nhận Thức Chính Trị</h2>
           <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
               Hệ thống câu hỏi được cập nhật từ Ngân hàng đề thi của Tiểu đoàn. 
               Bài thi bao gồm các nội dung về Lịch sử, Chính trị, Quân sự và Pháp luật.
@@ -146,22 +147,23 @@ const Quiz: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 max-w-3xl mx-auto">
               <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                  <h4 className="font-bold text-green-800 text-lg mb-1">Ngẫu nhiên</h4>
+                  <h4 className="font-bold text-lg mb-1" style={{ color: settings.primaryColor }}>Ngẫu nhiên</h4>
                   <p className="text-sm text-green-600">Câu hỏi được chọn lọc ngẫu nhiên từ ngân hàng đề.</p>
               </div>
               <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                  <h4 className="font-bold text-green-800 text-lg mb-1">Không giới hạn</h4>
+                  <h4 className="font-bold text-lg mb-1" style={{ color: settings.primaryColor }}>Không giới hạn</h4>
                   <p className="text-sm text-green-600">Thời gian làm bài thoải mái để nghiên cứu kỹ.</p>
               </div>
               <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                  <h4 className="font-bold text-green-800 text-lg mb-1">Xếp hạng</h4>
+                  <h4 className="font-bold text-lg mb-1" style={{ color: settings.primaryColor }}>Xếp hạng</h4>
                   <p className="text-sm text-green-600">Kết quả được lưu vào Bảng vàng thành tích.</p>
               </div>
           </div>
 
           <button 
             onClick={handleStartQuiz}
-            className="inline-flex items-center px-8 py-4 bg-green-700 text-white font-bold text-lg rounded-full hover:bg-green-800 hover:scale-105 transition-all shadow-lg hover:shadow-green-900/30"
+            className="inline-flex items-center px-8 py-4 text-white font-bold text-lg rounded-full hover:scale-105 transition-all shadow-lg"
+            style={{ backgroundColor: settings.primaryColor }}
           >
               <Play className="w-6 h-6 mr-2" fill="currentColor" /> Bắt đầu làm bài
           </button>
@@ -183,7 +185,7 @@ const Quiz: React.FC = () => {
                           <div className="h-full bg-yellow-500 transition-all duration-300" style={{ width: `${progress}%` }}></div>
                       </div>
                   </div>
-                  <div className="flex items-center text-green-700 font-mono font-bold text-lg">
+                  <div className="flex items-center font-mono font-bold text-lg" style={{ color: settings.primaryColor }}>
                       <Clock className="w-5 h-5 mr-2" /> {formatTime(timer)}
                   </div>
               </div>
@@ -243,7 +245,8 @@ const Quiz: React.FC = () => {
                       ) : (
                           <button 
                               onClick={() => setCurrentQuestionIdx(prev => prev + 1)}
-                              className="px-8 py-3 bg-green-700 text-white font-bold rounded-lg hover:bg-green-800 shadow-md transition-all"
+                              className="px-8 py-3 text-white font-bold rounded-lg shadow-md transition-all"
+                              style={{ backgroundColor: settings.primaryColor }}
                           >
                               Câu tiếp theo
                           </button>
@@ -273,7 +276,7 @@ const Quiz: React.FC = () => {
       return (
           <div className="max-w-4xl mx-auto animate-fade-in-up">
               <div className="bg-white rounded-xl shadow-2xl overflow-hidden mb-8">
-                  <div className="bg-green-900 text-white p-8 text-center">
+                  <div className="text-white p-8 text-center" style={{ backgroundColor: settings.primaryColor }}>
                       <h2 className="text-3xl font-display font-bold mb-2">Kết Quả Bài Thi</h2>
                       <p className="opacity-80">Hoàn thành trong: {formatTime(timer)}</p>
                   </div>
@@ -316,7 +319,7 @@ const Quiz: React.FC = () => {
         <div className="p-6 border-b border-gray-100 bg-gray-50">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
                 <div className="flex items-center space-x-2">
-                    <Shield className="w-6 h-6 text-green-800" />
+                    <Shield className="w-6 h-6" style={{ color: settings.primaryColor }} />
                     <h2 className="text-xl font-bold text-gray-800 uppercase">Xếp hạng thi đua</h2>
                 </div>
                 
@@ -328,7 +331,8 @@ const Quiz: React.FC = () => {
                         placeholder="Tìm tên, đơn vị..." 
                         value={filter}
                         onChange={(e) => setFilter(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:border-green-500 text-sm"
+                        style={{ '--tw-ring-color': settings.primaryColor } as any}
                     />
                 </div>
             </div>
@@ -344,9 +348,10 @@ const Quiz: React.FC = () => {
                         onClick={() => setActiveTopic(topic)}
                         className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all ${
                             activeTopic === topic 
-                            ? 'bg-green-700 text-white shadow-md transform -translate-y-0.5' 
-                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-green-50 hover:text-green-700'
+                            ? 'text-white shadow-md transform -translate-y-0.5' 
+                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-green-50'
                         }`}
+                        style={activeTopic === topic ? { backgroundColor: settings.primaryColor } : {}}
                     >
                         {topic}
                     </button>
@@ -394,7 +399,7 @@ const Quiz: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex items-center">
-                                            <div className="bg-green-100 p-2 rounded-full mr-3 border border-green-200">
+                                            <div className="p-2 rounded-full mr-3 border border-green-200 bg-green-100">
                                                 <User className="w-4 h-4 text-green-700" />
                                             </div>
                                             <div>
@@ -410,7 +415,7 @@ const Quiz: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <div className="inline-block">
-                                            <span className="text-xl font-display font-black text-green-800">{result.score}</span>
+                                            <span className="text-xl font-display font-black" style={{ color: settings.primaryColor }}>{result.score}</span>
                                             <span className="text-xs text-gray-400 font-medium">/{result.totalQuestions}</span>
                                         </div>
                                     </td>
@@ -447,11 +452,11 @@ const Quiz: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#f8f9fa] pb-12">
         {/* Header Banner */}
-        <div className="bg-green-900 text-white py-12 px-4 relative overflow-hidden mb-8">
+        <div className="text-white py-12 px-4 relative overflow-hidden mb-8" style={{ backgroundColor: settings.primaryColor }}>
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
             <div className="max-w-7xl mx-auto relative z-10 text-center">
                 <div className="inline-flex items-center justify-center p-3 bg-yellow-500 rounded-full mb-4 shadow-lg animate-bounce-slow">
-                    <Trophy className="w-8 h-8 text-green-900" />
+                    <Trophy className="w-8 h-8" style={{ color: settings.primaryColor }} />
                 </div>
                 <h1 className="text-4xl md:text-5xl font-display font-black uppercase tracking-wider mb-4 text-yellow-500 drop-shadow-md">
                     Hội Thao Trực Tuyến
@@ -465,13 +470,15 @@ const Quiz: React.FC = () => {
                     <div className="flex justify-center space-x-4 mt-8">
                         <button 
                             onClick={() => setCurrentView('start')}
-                            className={`px-6 py-3 rounded-lg font-bold transition-all ${currentView === 'start' ? 'bg-yellow-500 text-green-900 shadow-lg' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                            className={`px-6 py-3 rounded-lg font-bold transition-all ${currentView === 'start' ? 'bg-yellow-500 shadow-lg' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                            style={currentView === 'start' ? { color: settings.primaryColor } : {}}
                         >
                             <span className="flex items-center"><CheckCircle className="w-4 h-4 mr-2"/> Làm bài thi</span>
                         </button>
                         <button 
                             onClick={() => setCurrentView('leaderboard')}
-                            className={`px-6 py-3 rounded-lg font-bold transition-all ${currentView === 'leaderboard' ? 'bg-yellow-500 text-green-900 shadow-lg' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                            className={`px-6 py-3 rounded-lg font-bold transition-all ${currentView === 'leaderboard' ? 'bg-yellow-500 shadow-lg' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                            style={currentView === 'leaderboard' ? { color: settings.primaryColor } : {}}
                         >
                             <span className="flex items-center"><Trophy className="w-4 h-4 mr-2"/> Bảng xếp hạng</span>
                         </button>

@@ -97,6 +97,41 @@ export interface Comment {
   date: string;
 }
 
+// History Milestone Interface
+export interface Milestone {
+  id: string;
+  year: string;
+  title: string;
+  subtitle: string;
+  content: string; // Mô tả ngắn hiển thị trên timeline
+  image: string;
+  icon: string; // Tên icon (Flag, Map, Star, Award...)
+  story: string; // Nội dung chi tiết (HTML) cho phần đọc sách
+  quiz: Question[]; // Câu hỏi kiểm tra cho mốc này
+}
+
+// Site Settings Interface (WordPress-like customization)
+export interface SiteSettings {
+  siteTitle: string;
+  siteSubtitle: string;
+  logoUrl: string; // URL icon/logo
+  primaryColor: string; // Màu chủ đạo (Header, Footer) - HEX
+  secondaryColor: string; // Màu nhấn (Buttons, Highlights) - HEX
+  
+  // Home Page Settings
+  heroImage: string;
+  heroTitle: string;
+  heroSubtitle: string;
+  
+  // Contact Info
+  contactAddress: string;
+  contactEmail: string;
+  contactPhone: string;
+  
+  // Advanced
+  customCss: string; // Cho phép admin chèn CSS tùy chỉnh
+}
+
 // Menu items type for navigation
 export type NavigationItem = {
   name: string;
