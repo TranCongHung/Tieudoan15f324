@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Article, User, Question, Score, DocumentFile, MediaItem, Leader, SiteSettings, Milestone } from '../../types';
-import { storage } from '../../services/storage';
+import { apiService } from '../../services/api';
 // Removed AI service import
 import { 
   Users, FileText, HelpCircle, Award, Folder, Plus, Trash2, Edit, Save, X, Loader2, Film, Music, LogOut, Search, ChevronLeft, ChevronRight, Filter,
@@ -90,7 +90,6 @@ const AdminDashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
-      // Sync temp settings when global settings change (or on first load)
       setTempSettings(settings);
   }, [settings]);
 
@@ -101,7 +100,6 @@ const AdminDashboard: React.FC = () => {
     }
   }, [activeTab]);
 
-  // Update Breadcrumbs when folder changes
   useEffect(() => {
       if (activeTab === 'documents') {
           if (!currentFolderId) {
@@ -122,11 +120,8 @@ const AdminDashboard: React.FC = () => {
       }
   }, [currentFolderId, documents, activeTab]);
 
-  // Set Media Source Type when opening modal
   useEffect(() => {
       if (isModalOpen && (activeTab === 'media' || activeTab === 'leaders')) {
-          // Reuse generic "mediaSourceType" for Leader image logic too
-          // Check Content Source
           if (editingItem && (editingItem.url || editingItem.image)) {
               const src = editingItem.url || editingItem.image;
               if (src.startsWith('data:')) {
@@ -137,22 +132,17 @@ const AdminDashboard: React.FC = () => {
           } else {
               setMediaSourceType('link');
           }
-          // Check Thumbnail Source
           if (editingItem && editingItem.thumbnail && editingItem.thumbnail.startsWith('data:')) {
               setMediaThumbSourceType('upload');
           } else {
               setMediaThumbSourceType('link');
           }
       } else {
-          // Default for new
           setMediaSourceType('link');
           setMediaThumbSourceType('link');
       }
   }, [isModalOpen, editingItem, activeTab]);
 
-  // --- FIX CURSOR JUMPING ---
-  // This useEffect handles the initial data load into the div.
-  // We rely on this instead of dangerouslySetInnerHTML to prevent re-renders on typing.
   useEffect(() => {
     if (isVisualMode && editorContentRef.current) {
         if (editorContentRef.current.innerHTML !== editorContent) {
@@ -161,7 +151,6 @@ const AdminDashboard: React.FC = () => {
     }
   }, [isVisualMode, editingItem]); 
 
-  // --- IMAGE OVERLAY UPDATE LOGIC ---
   useEffect(() => {
     if (selectedImg && editorContentRef.current) {
         const updateOverlay = () => {
@@ -179,16 +168,11 @@ const AdminDashboard: React.FC = () => {
                 height: imgRect.height
             });
         };
-
-        // Initial calculation
         updateOverlay();
-
-        // Listeners for layout changes
         const resizeObserver = new ResizeObserver(updateOverlay);
         resizeObserver.observe(selectedImg);
         editorContentRef.current.addEventListener('scroll', updateOverlay);
         window.addEventListener('resize', updateOverlay);
-
         return () => {
             resizeObserver.disconnect();
             editorContentRef.current?.removeEventListener('scroll', updateOverlay);
@@ -197,15 +181,19 @@ const AdminDashboard: React.FC = () => {
     }
   }, [selectedImg]);
 
-  const refreshData = () => {
-    setArticles(storage.getArticles());
-    setUsersList(storage.getUsers()); 
-    setQuestions(storage.getQuestions());
-    setScores(storage.getScores());
-    setDocuments(storage.getDocuments());
-    setMediaItems(storage.getMedia());
-    setLeaders(storage.getLeaders());
-    setMilestones(storage.getHistory());
+  const refreshData = async () => {
+    try {
+        setArticles(await apiService.getArticles());
+        setUsersList(await apiService.getUsers());
+        setQuestions(await apiService.getQuestions());
+        setScores(await apiService.getScores());
+        setDocuments(await apiService.getDocuments());
+        setMediaItems(await apiService.getMedia());
+        setLeaders(await apiService.getLeaders());
+        setMilestones(await apiService.getHistory());
+    } catch (error) {
+        console.error("Failed to load data:", error);
+    }
   };
 
   const handleLogout = () => {
@@ -213,7 +201,7 @@ const AdminDashboard: React.FC = () => {
     navigate('/');
   };
 
-  const handleDelete = (id: string, type: Tab) => {
+  const handleDelete = async (id: string, type: Tab) => {
     if (type === 'personnel' && id === currentUser?.id) {
         alert("Không thể xóa tài khoản đang đăng nhập!");
         return;
@@ -232,55 +220,20 @@ const AdminDashboard: React.FC = () => {
 
     if (!window.confirm("Đồng chí có chắc chắn muốn xóa dữ liệu này? Hành động không thể hoàn tác.")) return;
     
-    switch (type) {
-        case 'articles': {
-            const newData = articles.filter(i => i.id !== id);
-            storage.saveArticles(newData);
-            setArticles(newData);
-            break;
+    try {
+        switch (type) {
+            case 'articles': await apiService.deleteArticle(id); break;
+            case 'history': await apiService.deleteMilestone(id); break;
+            case 'personnel': await apiService.deleteUser(id); break;
+            case 'questions': await apiService.deleteQuestion(id); break;
+            case 'scores': await apiService.deleteScore(id); break;
+            case 'documents': await apiService.deleteDocument(id); break;
+            case 'media': await apiService.deleteMedia(id); break;
+            case 'leaders': await apiService.deleteLeader(id); break;
         }
-        case 'history': {
-            const newData = milestones.filter(i => i.id !== id);
-            storage.saveHistory(newData);
-            setMilestones(newData);
-            break;
-        }
-        case 'personnel': {
-            const newData = usersList.filter(i => i.id !== id);
-            storage.saveUsers(newData);
-            setUsersList(newData);
-            break;
-        }
-        case 'questions': {
-            const newData = questions.filter(i => i.id !== id);
-            storage.saveQuestions(newData);
-            setQuestions(newData);
-            break;
-        }
-        case 'scores': {
-            const newData = scores.filter(i => i.id !== id);
-            storage.saveScores(newData);
-            setScores(newData);
-            break;
-        }
-        case 'documents': {
-            const newData = documents.filter(i => i.id !== id);
-            storage.saveDocuments(newData);
-            setDocuments(newData);
-            break;
-        }
-        case 'media': {
-            const newData = mediaItems.filter(i => i.id !== id);
-            storage.saveMedia(newData);
-            setMediaItems(newData);
-            break;
-        }
-        case 'leaders': {
-            const newData = leaders.filter(i => i.id !== id);
-            storage.saveLeaders(newData);
-            setLeaders(newData);
-            break;
-        }
+        await refreshData();
+    } catch (e) {
+        alert("Lỗi khi xóa dữ liệu. Vui lòng thử lại.");
     }
   };
 
@@ -310,8 +263,9 @@ const AdminDashboard: React.FC = () => {
       e.target.value = ''; // Reset input
   };
 
-  const saveSiteSettings = () => {
-      updateSettings(tempSettings);
+  const saveSiteSettings = async () => {
+      await apiService.saveSettings(tempSettings);
+      updateSettings(tempSettings); // Update Context
       alert("Đã lưu cấu hình giao diện thành công!");
   };
 
@@ -324,14 +278,11 @@ const AdminDashboard: React.FC = () => {
   // Add Download Logic
   const handleDownload = (item: DocumentFile) => {
       if (item.isFolder) return;
-      
-      // Simulate file download by creating a blob
       try {
           const element = document.createElement("a");
           const fileContent = `Nội dung giả lập của tệp tin: ${item.name}\n\nKích thước: ${item.size}\nNgày tạo: ${item.date}\n\nĐây là tính năng tải xuống demo của hệ thống.`;
           const file = new Blob([fileContent], {type: 'text/plain'});
           element.href = URL.createObjectURL(file);
-          // Use original extension if present, else .txt
           const downloadName = item.name.includes('.') ? item.name : `${item.name}.txt`;
           element.download = downloadName;
           document.body.appendChild(element); 
@@ -342,7 +293,7 @@ const AdminDashboard: React.FC = () => {
       }
   };
 
-  const handleCreateFolder = () => {
+  const handleCreateFolder = async () => {
       const name = prompt("Nhập tên thư mục mới:");
       if (name && name.trim()) {
           const newFolder: DocumentFile = {
@@ -354,9 +305,8 @@ const AdminDashboard: React.FC = () => {
               size: '--',
               type: 'FOLDER'
           };
-          const updated = [...documents, newFolder];
-          setDocuments(updated);
-          storage.saveDocuments(updated);
+          await apiService.createDocument(newFolder);
+          refreshData();
       }
   };
 
@@ -386,20 +336,20 @@ const AdminDashboard: React.FC = () => {
       e.target.value = ''; // Reset
   };
 
-  const processFiles = (files: File[]) => {
-      const newDocs: DocumentFile[] = files.map((file, idx) => ({
-          id: `doc_${Date.now()}_${idx}`,
-          name: file.name,
-          isFolder: false,
-          parentId: currentFolderId,
-          type: file.name.split('.').pop()?.toUpperCase() || 'FILE',
-          size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-          date: new Date().toISOString().split('T')[0]
-      }));
-
-      const updated = [...documents, ...newDocs];
-      setDocuments(updated);
-      storage.saveDocuments(updated);
+  const processFiles = async (files: File[]) => {
+      for (const file of files) {
+          const newDoc: DocumentFile = {
+              id: `doc_${Date.now()}_${Math.random()}`,
+              name: file.name,
+              isFolder: false,
+              parentId: currentFolderId,
+              type: file.name.split('.').pop()?.toUpperCase() || 'FILE',
+              size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+              date: new Date().toISOString().split('T')[0]
+          };
+          await apiService.createDocument(newDoc);
+      }
+      refreshData();
   };
 
   // --- CHART DATA PROCESSING ---
@@ -412,7 +362,6 @@ const AdminDashboard: React.FC = () => {
       if (timeFilter === 'day') {
           filteredScores = scores.filter(s => s.date === filterDate);
       } else if (timeFilter === 'week') {
-          // Calculate start and end of the week (assuming Monday start)
           const day = targetDate.getDay();
           const diff = targetDate.getDate() - day + (day === 0 ? -6 : 1); 
           const startOfWeek = new Date(targetDate);
@@ -434,7 +383,6 @@ const AdminDashboard: React.FC = () => {
           });
       }
 
-      // Aggregate Data: Group by Unit Name and calculate Average of Total Scores
       const groupedData: Record<string, { totalScore: number; count: number }> = {};
       
       filteredScores.forEach(s => {
@@ -445,7 +393,6 @@ const AdminDashboard: React.FC = () => {
           groupedData[s.unitName].count += 1;
       });
 
-      // Transform to Array
       const chartData = Object.keys(groupedData).map(unit => ({
           unitName: unit,
           score: parseFloat((groupedData[unit].totalScore / groupedData[unit].count).toFixed(2)) // Average total score
@@ -464,9 +411,8 @@ const AdminDashboard: React.FC = () => {
 
     if (item) {
         setEditorTitle(item.title);
-        setEditorImage(item.imageUrl || item.image || ''); // Article uses imageUrl, Milestone uses image
+        setEditorImage(item.imageUrl || item.image || ''); 
         
-        // Content mapping
         if (type === 'articles') {
             setEditorContent(item.content);
             setEditorSummary(item.summary);
@@ -474,13 +420,12 @@ const AdminDashboard: React.FC = () => {
             setEditorDate(item.date);
         } else {
             setEditorContent(item.story);
-            setEditorSummary(item.content); // Use summary field for 'content' (description)
+            setEditorSummary(item.content); 
             setEditorYear(item.year);
             setEditorSubtitle(item.subtitle);
             setEditorIcon(item.icon);
         }
 
-        // Determine source type for featured image
         const img = item.imageUrl || item.image;
         if (img && img.startsWith('data:')) {
             setFeaturedImgSourceType('upload');
@@ -488,7 +433,6 @@ const AdminDashboard: React.FC = () => {
             setFeaturedImgSourceType('link');
         }
     } else {
-        // Defaults
         setEditorTitle('');
         setEditorContent('');
         setEditorSummary('');
@@ -506,7 +450,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // ... (Rich text commands, image resizing logic) ...
   const execCmd = (command: string, value: string | undefined = undefined) => {
       if (!isVisualMode) return;
       document.execCommand(command, false, value);
@@ -641,7 +584,7 @@ const AdminDashboard: React.FC = () => {
       event.target.value = '';
   };
 
-  const saveContent = () => {
+  const saveContent = async () => {
       if (!editorTitle || !editorContent) {
           alert("Vui lòng nhập tiêu đề và nội dung.");
           return;
@@ -659,34 +602,34 @@ const AdminDashboard: React.FC = () => {
               author: editorAuthor,
               date: editorDate
           };
-          const newData = editingItem 
-            ? articles.map(i => i.id === id ? newArticle : i) 
-            : [newArticle, ...articles]; 
-          storage.saveArticles(newData);
-          setArticles(newData);
-      } else if (activeTab === 'history') {
-          // Preserve existing quiz data if editing, or empty array if new
-          const existingQuiz = editingItem?.quiz || [];
           
+          if (editingItem) {
+              await apiService.updateArticle(id, newArticle);
+          } else {
+              await apiService.createArticle(newArticle);
+          }
+      } else if (activeTab === 'history') {
+          const existingQuiz = editingItem?.quiz || [];
           const newMilestone: Milestone = {
               id,
               year: editorYear,
               title: editorTitle,
               subtitle: editorSubtitle,
-              content: editorSummary, // Mapping summary to content (description)
-              story: editorContent, // HTML content
+              content: editorSummary, 
+              story: editorContent, 
               image: editorImage || 'https://picsum.photos/600/400',
               icon: editorIcon,
               quiz: existingQuiz
           };
-          const newData = editingItem
-            ? milestones.map(i => i.id === id ? newMilestone : i)
-            : [...milestones, newMilestone].sort((a,b) => (a.year === 'Nay' ? 1 : b.year === 'Nay' ? -1 : parseInt(a.year) - parseInt(b.year)));
           
-          storage.saveHistory(newData);
-          setMilestones(newData);
+          if (editingItem) {
+              await apiService.updateMilestone(id, newMilestone);
+          } else {
+              await apiService.createMilestone(newMilestone);
+          }
       }
       
+      await refreshData();
       setViewMode('list');
       setEditingItem(null);
   };
@@ -697,168 +640,164 @@ const AdminDashboard: React.FC = () => {
       const formData = new FormData(e.target as HTMLFormElement);
       const id = editingItem ? editingItem.id : Date.now().toString();
 
-      switch (activeTab) {
-          case 'personnel': {
-               const email = formData.get('email') as string;
-               if (!editingItem && usersList.find(u => u.email === email)) {
-                   alert("Email này đã được sử dụng!");
-                   return;
-               }
-
-               const newItem: User = {
-                  id,
-                  name: formData.get('name') as string,
-                  email: email,
-                  rank: formData.get('rank') as string,
-                  position: formData.get('position') as string,
-                  unit: formData.get('unit') as string,
-                  password: formData.get('password') as string,
-                  role: formData.get('role') as 'admin' | 'user'
-              };
-              
-              if (editingItem && !newItem.password) {
-                  newItem.password = editingItem.password;
-              }
-
-              const newData = editingItem ? usersList.map(i => i.id === id ? newItem : i) : [...usersList, newItem];
-              storage.saveUsers(newData);
-              setUsersList(newData);
-              break;
-          }
-          // ... (scores, documents, media, leaders, questions logic same as before) ...
-          case 'scores': {
-              const militaryScore = Number(formData.get('militaryScore'));
-              const politicalScore = Number(formData.get('politicalScore'));
-              const logisticsScore = Number(formData.get('logisticsScore'));
-              const disciplineScore = Number(formData.get('disciplineScore'));
-              
-              const totalScore = parseFloat(((militaryScore + politicalScore + logisticsScore + disciplineScore) / 4).toFixed(2));
-
-              const newItem: Score = {
-                  id,
-                  unitName: formData.get('unitName') as string,
-                  militaryScore,
-                  politicalScore,
-                  logisticsScore,
-                  disciplineScore,
-                  totalScore,
-                  date: formData.get('date') as string,
-              };
-              const newData = editingItem ? scores.map(i => i.id === id ? newItem : i) : [...scores, newItem];
-              storage.saveScores(newData);
-              setScores(newData);
-              break;
-          }
-           case 'documents': {
-              let newItem: DocumentFile;
-              if (editingItem) {
-                  newItem = {
-                      ...editingItem,
-                      name: formData.get('name') as string,
-                      date: new Date().toISOString().split('T')[0] 
-                  };
-              } else {
-                  newItem = {
+      try {
+          switch (activeTab) {
+              case 'personnel': {
+                   const email = formData.get('email') as string;
+                   // Validation needed for create
+                   
+                   const newItem: User = {
                       id,
                       name: formData.get('name') as string,
-                      isFolder: false,
-                      parentId: currentFolderId,
-                      type: 'FILE',
-                      date: new Date().toISOString().split('T')[0],
-                      size: '0 KB' 
+                      email: email,
+                      rank: formData.get('rank') as string,
+                      position: formData.get('position') as string,
+                      unit: formData.get('unit') as string,
+                      password: formData.get('password') as string,
+                      role: formData.get('role') as 'admin' | 'user'
                   };
+                  
+                  if (editingItem && !newItem.password) {
+                      newItem.password = editingItem.password;
+                  }
+
+                  if (editingItem) await apiService.updateUser(id, newItem);
+                  else await apiService.createUser(newItem);
+                  break;
               }
-              const newData = editingItem ? documents.map(i => i.id === id ? newItem : i) : [...documents, newItem];
-              storage.saveDocuments(newData);
-              setDocuments(newData);
-              break;
-          }
-          case 'media': {
-             let url = formData.get('url') as string;
-             const file = formData.get('fileUpload') as File;
-             
-             if (mediaSourceType === 'upload' && file && file.size > 0) {
-                 url = await new Promise((resolve) => {
-                     const reader = new FileReader();
-                     reader.onload = (e) => resolve(e.target?.result as string);
-                     reader.readAsDataURL(file);
-                 });
-             } else if (mediaSourceType === 'upload' && (!file || file.size === 0) && editingItem) {
-                 url = editingItem.url;
-             }
+              case 'scores': {
+                  const militaryScore = Number(formData.get('militaryScore'));
+                  const politicalScore = Number(formData.get('politicalScore'));
+                  const logisticsScore = Number(formData.get('logisticsScore'));
+                  const disciplineScore = Number(formData.get('disciplineScore'));
+                  
+                  const totalScore = parseFloat(((militaryScore + politicalScore + logisticsScore + disciplineScore) / 4).toFixed(2));
 
-             let thumbnail = formData.get('thumbnail') as string;
-             const thumbFile = formData.get('thumbnailUpload') as File;
+                  const newItem: Score = {
+                      id,
+                      unitName: formData.get('unitName') as string,
+                      militaryScore,
+                      politicalScore,
+                      logisticsScore,
+                      disciplineScore,
+                      totalScore,
+                      date: formData.get('date') as string,
+                  };
+                  if (editingItem) await apiService.updateScore(id, newItem);
+                  else await apiService.createScore(newItem);
+                  break;
+              }
+               case 'documents': {
+                  let newItem: DocumentFile;
+                  if (editingItem) {
+                      newItem = {
+                          ...editingItem,
+                          name: formData.get('name') as string,
+                          date: new Date().toISOString().split('T')[0] 
+                      };
+                      await apiService.updateDocument(id, newItem);
+                  } else {
+                      // Note: Creation usually handled via file upload or create folder button, but generic modal can edit name
+                      newItem = {
+                          id,
+                          name: formData.get('name') as string,
+                          isFolder: false,
+                          parentId: currentFolderId,
+                          type: 'FILE',
+                          date: new Date().toISOString().split('T')[0],
+                          size: '0 KB' 
+                      };
+                      await apiService.createDocument(newItem);
+                  }
+                  break;
+              }
+              case 'media': {
+                 let url = formData.get('url') as string;
+                 const file = formData.get('fileUpload') as File;
+                 
+                 if (mediaSourceType === 'upload' && file && file.size > 0) {
+                     url = await new Promise((resolve) => {
+                         const reader = new FileReader();
+                         reader.onload = (e) => resolve(e.target?.result as string);
+                         reader.readAsDataURL(file);
+                     });
+                 } else if (mediaSourceType === 'upload' && (!file || file.size === 0) && editingItem) {
+                     url = editingItem.url;
+                 }
 
-             if (mediaThumbSourceType === 'upload' && thumbFile && thumbFile.size > 0) {
-                 thumbnail = await new Promise((resolve) => {
-                     const reader = new FileReader();
-                     reader.onload = (e) => resolve(e.target?.result as string);
-                     reader.readAsDataURL(thumbFile);
-                 });
-             } else if (mediaThumbSourceType === 'upload' && (!thumbFile || thumbFile.size === 0) && editingItem) {
-                 thumbnail = editingItem.thumbnail;
-             }
+                 let thumbnail = formData.get('thumbnail') as string;
+                 const thumbFile = formData.get('thumbnailUpload') as File;
 
-             const newItem: MediaItem = {
-                  id,
-                  title: formData.get('title') as string,
-                  type: formData.get('type') as 'video' | 'audio',
-                  url: url,
-                  description: formData.get('description') as string,
-                  date: formData.get('date') as string,
-                  thumbnail: thumbnail || undefined
-              };
-              const newData = editingItem ? mediaItems.map(i => i.id === id ? newItem : i) : [...mediaItems, newItem];
-              storage.saveMedia(newData);
-              setMediaItems(newData);
-              break;
-          }
-          case 'leaders': {
-             let image = formData.get('image') as string;
-             const file = formData.get('imageUpload') as File;
-             
-             if (mediaSourceType === 'upload' && file && file.size > 0) {
-                 image = await new Promise((resolve) => {
-                     const reader = new FileReader();
-                     reader.onload = (e) => resolve(e.target?.result as string);
-                     reader.readAsDataURL(file);
-                 });
-             } else if (mediaSourceType === 'upload' && (!file || file.size === 0) && editingItem) {
-                 image = editingItem.image;
-             }
+                 if (mediaThumbSourceType === 'upload' && thumbFile && thumbFile.size > 0) {
+                     thumbnail = await new Promise((resolve) => {
+                         const reader = new FileReader();
+                         reader.onload = (e) => resolve(e.target?.result as string);
+                         reader.readAsDataURL(thumbFile);
+                     });
+                 } else if (mediaThumbSourceType === 'upload' && (!thumbFile || thumbFile.size === 0) && editingItem) {
+                     thumbnail = editingItem.thumbnail;
+                 }
 
-             const newItem: Leader = {
-                  id,
-                  name: formData.get('name') as string,
-                  role: formData.get('role') as string,
-                  image: image || 'https://picsum.photos/200/200?grayscale',
-              };
-              const newData = editingItem ? leaders.map(i => i.id === id ? newItem : i) : [...leaders, newItem];
-              storage.saveLeaders(newData);
-              setLeaders(newData);
-              break;
+                 const newItem: MediaItem = {
+                      id,
+                      title: formData.get('title') as string,
+                      type: formData.get('type') as 'video' | 'audio',
+                      url: url,
+                      description: formData.get('description') as string,
+                      date: formData.get('date') as string,
+                      thumbnail: thumbnail || undefined
+                  };
+                  if (editingItem) await apiService.updateMedia(id, newItem);
+                  else await apiService.createMedia(newItem);
+                  break;
+              }
+              case 'leaders': {
+                 let image = formData.get('image') as string;
+                 const file = formData.get('imageUpload') as File;
+                 
+                 if (mediaSourceType === 'upload' && file && file.size > 0) {
+                     image = await new Promise((resolve) => {
+                         const reader = new FileReader();
+                         reader.onload = (e) => resolve(e.target?.result as string);
+                         reader.readAsDataURL(file);
+                     });
+                 } else if (mediaSourceType === 'upload' && (!file || file.size === 0) && editingItem) {
+                     image = editingItem.image;
+                 }
+
+                 const newItem: Leader = {
+                      id,
+                      name: formData.get('name') as string,
+                      role: formData.get('role') as string,
+                      image: image || 'https://picsum.photos/200/200?grayscale',
+                  };
+                  if (editingItem) await apiService.updateLeader(id, newItem);
+                  else await apiService.createLeader(newItem);
+                  break;
+              }
+               case 'questions': {
+                  const optionsRaw = formData.get('options') as string;
+                  const newItem: Question = {
+                      id,
+                      questionText: formData.get('questionText') as string,
+                      options: optionsRaw.split('\n').filter(s => s.trim() !== ''),
+                      correctAnswerIndex: Number(formData.get('correctAnswerIndex')),
+                      explanation: formData.get('explanation') as string
+                  };
+                  if (editingItem) await apiService.updateQuestion(id, newItem);
+                  else await apiService.createQuestion(newItem);
+                  break;
+              }
           }
-           case 'questions': {
-              const optionsRaw = formData.get('options') as string;
-              const newItem: Question = {
-                  id,
-                  questionText: formData.get('questionText') as string,
-                  options: optionsRaw.split('\n').filter(s => s.trim() !== ''),
-                  correctAnswerIndex: Number(formData.get('correctAnswerIndex')),
-                  explanation: formData.get('explanation') as string
-              };
-              const newData = editingItem ? questions.map(i => i.id === id ? newItem : i) : [...questions, newItem];
-              storage.saveQuestions(newData);
-              setQuestions(newData);
-              break;
-          }
+          await refreshData();
+          setIsModalOpen(false);
+          setEditingItem(null);
+      } catch (e) {
+          alert("Có lỗi xảy ra khi lưu dữ liệu.");
+          console.error(e);
       }
-      setIsModalOpen(false);
-      setEditingItem(null);
   };
 
-  // ... (Excel logic same as before) ...
   const handleDownloadTemplate = () => {
       const header = ["Nội dung câu hỏi", "Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D", "Đáp án đúng (A/B/C/D)", "Giải thích"];
       const sampleData = [
@@ -880,7 +819,7 @@ const AdminDashboard: React.FC = () => {
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = (evt) => {
+      reader.onload = async (evt) => {
           try {
               const bstr = evt.target?.result;
               const wb = XLSX.read(bstr, { type: 'binary' });
@@ -888,7 +827,9 @@ const AdminDashboard: React.FC = () => {
               const ws = wb.Sheets[wsname];
               const data = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[][];
               const rows = data.slice(1).filter(r => r.length > 0);
-              const newQuestions: Question[] = rows.map((row, index) => {
+              
+              let successCount = 0;
+              for (const row of rows) {
                   const questionText = row[0];
                   const options = [row[1], row[2], row[3], row[4]].filter(o => o !== undefined && o !== null);
                   const correctChar = row[5]?.toString().toUpperCase().trim();
@@ -897,19 +838,21 @@ const AdminDashboard: React.FC = () => {
                   else if (correctChar === 'C') correctIndex = 2;
                   else if (correctChar === 'D') correctIndex = 3;
                   const explanation = row[6];
-                  return {
-                      id: `excel_${Date.now()}_${index}`,
+                  
+                  const newItem: Question = {
+                      id: `excel_${Date.now()}_${Math.random()}`,
                       questionText: questionText || "Câu hỏi chưa có nội dung",
                       options: options.length > 0 ? options : ["Lựa chọn A", "Lựa chọn B"],
                       correctAnswerIndex: correctIndex,
                       explanation: explanation || ""
                   };
-              });
-              if (newQuestions.length > 0) {
-                  const merged = [...questions, ...newQuestions];
-                  storage.saveQuestions(merged);
-                  setQuestions(merged);
-                  alert(`Đã nhập thành công ${newQuestions.length} câu hỏi từ Excel.`);
+                  await apiService.createQuestion(newItem);
+                  successCount++;
+              }
+              
+              if (successCount > 0) {
+                  await refreshData();
+                  alert(`Đã nhập thành công ${successCount} câu hỏi từ Excel.`);
               } else {
                   alert("Không tìm thấy dữ liệu hợp lệ trong file Excel.");
               }

@@ -7,7 +7,7 @@ CREATE TABLE users (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    rank_name VARCHAR(50), -- Cấp bậc (rank là từ khóa reserved nên dùng rank_name)
+    rank_name VARCHAR(50), 
     position VARCHAR(100),
     unit VARCHAR(100),
     password VARCHAR(255) NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE articles (
     title VARCHAR(255) NOT NULL,
     summary TEXT,
     content LONGTEXT,
-    image_url TEXT,
+    image_url LONGTEXT,
     date DATE,
     author VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -34,7 +34,7 @@ CREATE TABLE milestones (
     title VARCHAR(255),
     subtitle VARCHAR(255),
     content TEXT,
-    image TEXT,
+    image LONGTEXT,
     icon VARCHAR(50),
     story LONGTEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -44,7 +44,7 @@ CREATE TABLE milestones (
 CREATE TABLE questions (
     id VARCHAR(50) PRIMARY KEY,
     question_text TEXT NOT NULL,
-    options JSON, -- Lưu mảng options dưới dạng JSON ["A", "B", "C", "D"]
+    options JSON, 
     correct_answer_index INT,
     explanation TEXT
 );
@@ -80,8 +80,8 @@ CREATE TABLE media (
     id VARCHAR(50) PRIMARY KEY,
     title VARCHAR(255),
     type ENUM('video', 'audio'),
-    url TEXT,
-    thumbnail TEXT,
+    url LONGTEXT,
+    thumbnail LONGTEXT,
     description TEXT,
     date DATE
 );
@@ -91,7 +91,7 @@ CREATE TABLE leaders (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100),
     role VARCHAR(100),
-    image TEXT
+    image LONGTEXT
 );
 
 -- 9. Bảng Comments (Bình luận)
@@ -107,6 +107,24 @@ CREATE TABLE comments (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- 10. Bảng Documents (Tài liệu)
+CREATE TABLE documents (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    is_folder BOOLEAN DEFAULT FALSE,
+    parent_id VARCHAR(50) DEFAULT NULL,
+    type VARCHAR(50),
+    date DATE,
+    size VARCHAR(50)
+);
+
+-- 11. Bảng Settings (Cấu hình hệ thống - Lưu key-value để linh hoạt)
+CREATE TABLE settings (
+    setting_key VARCHAR(50) PRIMARY KEY,
+    setting_value LONGTEXT
+);
+
 -- Dữ liệu mẫu Admin mặc định
 INSERT INTO users (id, name, email, rank_name, position, unit, password, role) 
-VALUES ('admin_root', 'Super Admin', 'admin@su324.vn', 'Đại tá', 'Chỉ huy trưởng', 'Sư đoàn 324', 'admin', 'admin');
+VALUES ('admin_root', 'Super Admin', 'admin@su324.vn', 'Đại tá', 'Chỉ huy trưởng', 'Sư đoàn 324', 'admin', 'admin')
+ON DUPLICATE KEY UPDATE name=name;
