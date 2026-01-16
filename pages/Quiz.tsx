@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { storage } from '../services/storage';
 import { QuizResult, Question } from '../types';
-import { Trophy, Medal, Calendar, Search, User, Award, Shield, ListFilter, Play, CheckCircle, XCircle, Clock, AlertCircle, Check } from 'lucide-react';
+import { Trophy, Medal, Calendar, Search, User, Award, Shield, ListFilter, Play, CheckCircle, Clock } from 'lucide-react';
 import { Link } from '../context/AuthContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -302,41 +302,9 @@ const Quiz: React.FC = () => {
                   </div>
               </div>
 
-              {/* Review Answers */}
-              <div className="space-y-6">
-                  <h3 className="text-xl font-bold text-gray-800 border-b pb-2">Xem lại đáp án</h3>
-                  {questions.map((q, idx) => {
-                      const isCorrect = userAnswers[idx] === q.correctAnswerIndex;
-                      return (
-                          <div key={idx} className={`bg-white p-6 rounded-lg border-l-4 shadow-sm ${isCorrect ? 'border-green-500' : 'border-red-500'}`}>
-                              <div className="flex items-start mb-3">
-                                  <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-white mr-3 ${isCorrect ? 'bg-green-600' : 'bg-red-600'}`}>
-                                      {idx + 1}
-                                  </span>
-                                  <p className="font-bold text-gray-800 text-lg">{q.questionText}</p>
-                              </div>
-                              <div className="ml-11 space-y-2">
-                                  {q.options.map((opt, oIdx) => {
-                                      let optStyle = "p-2 rounded border border-transparent";
-                                      if (oIdx === q.correctAnswerIndex) optStyle = "bg-green-100 text-green-800 font-bold border-green-200";
-                                      else if (oIdx === userAnswers[idx] && !isCorrect) optStyle = "bg-red-100 text-red-800 border-red-200 line-through";
-                                      else optStyle = "text-gray-500";
-                                      
-                                      return (
-                                          <div key={oIdx} className={optStyle}>
-                                              {String.fromCharCode(65 + oIdx)}. {opt}
-                                          </div>
-                                      );
-                                  })}
-                                  {!isCorrect && q.explanation && (
-                                      <div className="mt-3 text-sm text-gray-600 bg-gray-50 p-3 rounded italic">
-                                          <span className="font-bold not-italic text-gray-800">Giải thích:</span> {q.explanation}
-                                      </div>
-                                  )}
-                              </div>
-                          </div>
-                      );
-                  })}
+              {/* Review Answers section has been removed as per request */}
+              <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 text-sm text-yellow-800 font-medium rounded-r shadow-sm">
+                  Lưu ý: Để đảm bảo tính công bằng và bảo mật, hệ thống không hiển thị đáp án chi tiết sau khi thi.
               </div>
           </div>
       );

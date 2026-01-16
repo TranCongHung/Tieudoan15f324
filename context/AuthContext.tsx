@@ -38,6 +38,10 @@ export const Link: React.FC<React.AnchorHTMLAttributes<HTMLAnchorElement> & { to
             onClick={(e) => {
                 e.preventDefault();
                 navigate(to);
+                // Execute external onClick if provided (e.g., closing mobile menu)
+                if (props.onClick) {
+                    props.onClick(e);
+                }
             }}
             className={className}
             {...props}
