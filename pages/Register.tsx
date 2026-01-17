@@ -1,345 +1,116 @@
+
 import React, { useState } from 'react';
 import { useAuth, useNavigate, Link } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteContext';
-import { Shield, User, Mail, Award, Briefcase, Lock, X, ArrowRight, UserPlus } from 'lucide-react';
+import { Shield, User, Mail, Award, Briefcase, Lock, X, ArrowRight, UserPlus, Loader2 } from 'lucide-react';
 
 const Register: React.FC = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    rank_name: '',
-    position: '',
-    password: '',
-    confirmPassword: ''
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formData, setFormData] = useState({ name: '', email: '', rank: '', position: '', unit: '', password: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
   const { settings } = useSiteSettings();
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.name || formData.name.trim().length < 2) {
-      newErrors.name = 'Họ và tên phải có ít nhất 2 ký tự';
-    }
-    
-    if (!formData.email || !formData.email.includes('@') || !formData.email.includes('.')) {
-      newErrors.email = 'Email không hợp lệ';
-    }
-    
-    if (!formData.rank_name || formData.rank_name.trim().length < 2) {
-      newErrors.rank_name = 'Cấp bậc không được để trống';
-    }
-    
-    if (!formData.position || formData.position.trim().length < 2) {
-      newErrors.position = 'Chức vụ không được để trống';
-    }
-    
-    if (!formData.password || formData.password.length < 6) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
-    }
-    
-    if (formData.password && !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(formData.password)) {
-      newErrors.password = 'Mật khẩu phải chứa cả chữ và số';
-    }
-    
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear error for this field when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
-    setLoading(true);
+    setIsSubmitting(true);
     setError('');
 
     try {
-      const result = await register({
-        name: formData.name,
-        email: formData.email,
-        rank_name: formData.rank_name,
-        position: formData.position,
-        password: formData.password,
-        role: 'user'
-      });
-      
-      if (result.success) {
-        alert('Đăng ký thành công! Tài khoản của bạn đã được tạo. Bạn sẽ được chuyển đến trang đăng nhập.');
-        // Redirect to login page after successful registration
-        setTimeout(() => {
-          navigate('/login');
-        }, 1500);
-      } else {
-        setError(result.message);
-      }
+        const success = await register({
+          name: formData.name,
+          email: formData.email,
+          rank: formData.rank,
+          position: formData.position,
+          unit: formData.unit,
+          password: formData.password,
+          role: 'user'
+        });
+
+        if (success) {
+          alert("Đăng ký thành công!");
+          navigate('/');
+        } else {
+          setError('Email này đã tồn tại hoặc có lỗi trong quá trình đăng ký.');
+        }
     } catch (err: any) {
-      setError('Lỗi hệ thống: ' + err.message);
+        setError(err.message || 'Lỗi hệ thống.');
     } finally {
-      setLoading(false);
+        setIsSubmitting(false);
     }
   };
 
   return (
     <div className="min-h-screen relative flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      {/* Background with Overlay */}
       <div className="absolute inset-0 z-0">
-        <img 
-            src={settings.heroImage || "https://picsum.photos/1920/1080?grayscale&blur=2"} 
-            className="w-full h-full object-cover" 
-            alt="Background" 
-        />
-        <div 
-             className="absolute inset-0 opacity-90 mix-blend-multiply"
-             style={{ 
-                 background: `linear-gradient(to bottom left, ${settings.primaryColor}, #111111)`
-             }}
-        ></div>
+        <img src={settings.heroImage || "https://picsum.photos/1920/1080?grayscale&blur=2"} className="w-full h-full object-cover" alt="Background" />
+        <div className="absolute inset-0 opacity-90 mix-blend-multiply" style={{ background: `linear-gradient(to bottom left, ${settings.primaryColor}, #111111)` }}></div>
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
       </div>
 
-      {/* Main Card */}
       <div className="relative z-10 w-full max-w-lg animate-scale-up">
         <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-white/20">
-            
-            {/* Close Button */}
-            <Link 
-                to="/" 
-                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all duration-300 z-20 group"
-                title="Đóng / Quay về trang chủ"
-            >
+            <Link to="/" className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full z-20 group">
                 <X className="w-6 h-6 group-hover:rotate-90 transition-transform" />
             </Link>
 
-            {/* Header */}
             <div className="p-8 text-center relative overflow-hidden" style={{ background: settings.secondaryColor }}>
                 <div className="absolute top-0 left-0 w-full h-1" style={{ background: settings.primaryColor }}></div>
-                <div className="absolute top-10 -left-10 w-40 h-40 bg-white/20 rounded-full blur-3xl"></div>
-                
                 <div className="relative z-10 flex flex-col items-center">
                     <div className="bg-white p-3 rounded-full shadow-lg mb-4 border-2" style={{ borderColor: settings.primaryColor }}>
                         <UserPlus className="h-10 w-10" style={{ color: settings.secondaryColor }} />
                     </div>
-                    <h2 className="text-2xl font-display font-black uppercase tracking-wider" style={{ color: settings.primaryColor }}>
-                        Đăng Ký Tài Khoản
-                    </h2>
-                    <p className="text-sm font-serif italic mt-1 font-bold" style={{ color: settings.primaryColor }}>
-                        Trở thành thành viên {settings.siteTitle}
-                    </p>
+                    <h2 className="text-2xl font-display font-black uppercase tracking-wider" style={{ color: settings.primaryColor }}>Đăng Ký Tài Khoản</h2>
                 </div>
             </div>
 
-            {/* Form */}
             <div className="p-6 sm:p-8">
                 <form className="space-y-4" onSubmit={handleSubmit}>
-                    {error && (
-                        <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-r-md text-sm text-red-700 font-medium">
-                            {error}
-                        </div>
-                    )}
+                    {error && <div className="bg-red-50 border-l-4 border-red-500 p-3 text-sm text-red-700 font-medium">{error}</div>}
                     
-                    {/* Name */}
-                    <div className="relative group">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Họ và tên</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <User className="h-5 w-5 text-gray-400 transition-colors" />
-                            </div>
-                            <input
-                                id="name"
-                                name="name"
-                                type="text"
-                                required
-                                value={formData.name}
-                                onChange={handleChange}
-                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
-                                style={{ '--tw-ring-color': settings.secondaryColor } as any}
-                                placeholder="Nguyễn Văn A"
-                            />
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1" style={{ color: settings.primaryColor }}>Họ và tên</label>
+                            <input name="name" type="text" required value={formData.name} onChange={handleChange} className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none text-sm" placeholder="Nguyễn Văn A" />
                         </div>
-                    </div>
-
-                    {/* Email */}
-                    <div className="relative group">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Gmail</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Mail className="h-5 w-5 text-gray-400 transition-colors" />
-                            </div>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                required
-                                value={formData.email}
-                                onChange={handleChange}
-                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
-                                style={{ '--tw-ring-color': settings.secondaryColor } as any}
-                                placeholder="vidu@su324.vn"
-                            />
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1" style={{ color: settings.primaryColor }}>Email quân sự</label>
+                            <input name="email" type="email" required value={formData.email} onChange={handleChange} className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none text-sm" placeholder="vidu@su324.vn" />
                         </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        {/* Rank */}
-                        <div className="relative group">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Cấp bậc</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Award className="h-5 w-5 text-gray-400 transition-colors" />
-                                </div>
-                                <input
-                                    id="rank"
-                                    name="rank_name"
-                                    type="text"
-                                    required
-                                    value={formData.rank_name}
-                                    onChange={handleChange}
-                                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
-                                    style={{ '--tw-ring-color': settings.secondaryColor } as any}
-                                    placeholder="Trung úy"
-                                />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1" style={{ color: settings.primaryColor }}>Cấp bậc</label>
+                                <input name="rank" type="text" required value={formData.rank} onChange={handleChange} className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none text-sm" placeholder="Trung úy" />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1" style={{ color: settings.primaryColor }}>Chức vụ</label>
+                                <input name="position" type="text" required value={formData.position} onChange={handleChange} className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none text-sm" placeholder="Trung đội trưởng" />
                             </div>
                         </div>
-
-                        {/* Position */}
-                        <div className="relative group">
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Chức vụ</label>
-                            <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Briefcase className="h-5 w-5 text-gray-400 transition-colors" />
-                                </div>
-                                <input
-                                    id="position"
-                                    name="position"
-                                    type="text"
-                                    required
-                                    value={formData.position}
-                                    onChange={handleChange}
-                                    className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
-                                    style={{ '--tw-ring-color': settings.secondaryColor } as any}
-                                    placeholder="Trung đội trưởng"
-                                />
-                            </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1" style={{ color: settings.primaryColor }}>Đơn vị</label>
+                            <input name="unit" type="text" required value={formData.unit} onChange={handleChange} className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none text-sm" placeholder="Đại đội 1 - Tiểu đoàn 15" />
                         </div>
-                    </div>
-
-                    {/* Password */}
-                    <div className="relative group">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Mật khẩu</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Lock className="h-5 w-5 text-gray-400 transition-colors" />
-                            </div>
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                required
-                                value={formData.password}
-                                onChange={handleChange}
-                                className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm ${
-                                    errors.password ? 'border-red-500' : 'border-gray-300'
-                                }`}
-                                style={{ '--tw-ring-color': settings.secondaryColor } as any}
-                                placeholder="••••••••"
-                            />
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1" style={{ color: settings.primaryColor }}>Mật khẩu</label>
+                            <input name="password" type="password" required value={formData.password} onChange={handleChange} className="block w-full px-3 py-2.5 border border-gray-300 rounded-lg outline-none text-sm" placeholder="••••••••" />
                         </div>
-                        {errors.password && (
-                            <p className="mt-1 text-xs text-red-600">{errors.password}</p>
-                        )}
-                    </div>
-
-                    {/* Confirm Password */}
-                    <div className="relative group">
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Xác nhận mật khẩu</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Lock className="h-5 w-5 text-gray-400 transition-colors" />
-                            </div>
-                            <input
-                                id="confirmPassword"
-                                name="confirmPassword"
-                                type="password"
-                                required
-                                value={formData.confirmPassword}
-                                onChange={handleChange}
-                                className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm ${
-                                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-                                }`}
-                                style={{ '--tw-ring-color': settings.secondaryColor } as any}
-                                placeholder="••••••••"
-                            />
-                        </div>
-                        {errors.confirmPassword && (
-                            <p className="mt-1 text-xs text-red-600">{errors.confirmPassword}</p>
-                        )}
                     </div>
 
                     <div className="pt-2">
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5 transition-all uppercase tracking-wide"
-                            style={{ 
-                                backgroundColor: settings.primaryColor,
-                                color: loading ? '#9CA3AF' : '#ffffff'
-                            }}
-                        >
-                            {loading ? (
-                                <>
-                                    <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12v8a8 8 0 4-4 4 0-4-4 4v-8"></path>
-                                    </svg>
-                                    <span className="ml-2">Đang đăng ký...</span>
-                                </>
-                            ) : (
-                                'Hoàn tất đăng ký <ArrowRight className="ml-2 w-4 h-4" />'
-                            )}
+                        <button type="submit" disabled={isSubmitting} className="w-full flex justify-center items-center py-3 px-4 rounded-lg shadow-lg text-sm font-bold text-white uppercase tracking-wide disabled:opacity-50" style={{ backgroundColor: settings.primaryColor }}>
+                            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Hoàn tất đăng ký <ArrowRight className="ml-2 w-4 h-4" /></>}
                         </button>
                     </div>
                 </form>
-
-                <div className="mt-6 text-center">
-                    <p className="text-sm text-gray-600">
-                        Đã có tài khoản?{' '}
-                        <Link to="/login" className="font-bold hover:underline transition-colors" style={{ color: settings.primaryColor }}>
-                            Đăng nhập ngay
-                        </Link>
-                    </p>
-                </div>
+                <div className="mt-6 text-center"><p className="text-sm text-gray-600">Đã có tài khoản? <Link to="/login" className="font-bold hover:underline" style={{ color: settings.primaryColor }}>Đăng nhập ngay</Link></p></div>
             </div>
         </div>
-        
-        <p className="text-center text-white/60 text-xs mt-6 font-serif">
-            &copy; {new Date().getFullYear()} {settings.siteTitle}.
-        </p>
       </div>
     </div>
   );

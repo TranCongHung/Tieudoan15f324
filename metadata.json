@@ -1,5 +1,5 @@
 {
-  "name": "Cổng Thông Tin Tiểu Đoàn 15 - Sư Đoàn 324",
-  "description": "Hệ thống quản lý thông tin, lịch sử truyền thống, kiểm tra nhận thức và điều hành tác nghiệp cho Tiểu đoàn 15, Sư đoàn 324.",
+  "name": "Tiểu đoàn 15 - Sư đoàn 324",
+  "description": "Cổng thông tin điện tử nội bộ, giáo dục truyền thống và kiểm tra nhận thức chính trị tích hợp dữ liệu SQLite/Supabase.",
   "requestFramePermissions": []
 }

@@ -1,9 +1,9 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '../types';
-import { userService } from '../services/api';
-import { supabase } from '../services/supabase';
+import { apiService } from '../services/api';
 
-// --- Router Context & Hooks (Replacement for react-router-dom) ---
+// --- Router Context & Hooks ---
 const RouterContext = createContext<{
     path: string;
     navigate: (path: string) => void;
@@ -39,10 +39,7 @@ export const Link: React.FC<React.AnchorHTMLAttributes<HTMLAnchorElement> & { to
             onClick={(e) => {
                 e.preventDefault();
                 navigate(to);
-                // Execute external onClick if provided (e.g., closing mobile menu)
-                if (props.onClick) {
-                    props.onClick(e);
-                }
+                if (props.onClick) props.onClick(e);
             }}
             className={className}
             {...props}
@@ -63,11 +60,10 @@ export const Navigate: React.FC<{ to: string, replace?: boolean }> = ({ to }) =>
 // --- Auth Context ---
 interface AuthContextType {
   user: User | null;
-  login: (email: string, pass: string) => Promise<{ success: boolean; message: string }>;
-  register: (user: Omit<User, 'id'>) => Promise<{ success: boolean; message: string }>;
-  logout: () => Promise<void>;
+  login: (email: string, pass: string) => Promise<boolean>;
+  register: (user: Omit<User, 'id'>) => Promise<boolean>;
+  logout: () => void;
   isLoading: boolean;
-  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>(null!);
@@ -91,13 +87,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-      // Basic route matching for Article Detail
       const articleMatch = path.match(/^\/article\/(.+)$/);
-      if (articleMatch) {
-          setParams({ id: articleMatch[1] });
-      } else {
-          setParams({});
-      }
+      if (articleMatch) setParams({ id: articleMatch[1] });
+      else setParams({});
   }, [path]);
 
   const navigate = useCallback((newPath: string) => {
@@ -112,86 +104,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(JSON.parse(storedUser));
         }
     } catch (e) {
-        console.error("Failed to parse user from storage", e);
+        localStorage.removeItem('currentUser');
     }
     setIsLoading(false);
   }, []);
 
   const login = async (email: string, pass: string) => {
-    try {
-      setIsLoading(true);
-      const result = await userService.login(email, pass);
-      if (result) {
-        // Remove password from stored user data for security
-        const { password, ...userWithoutPassword } = result;
-        setUser(userWithoutPassword);
-        localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
-        return { success: true, message: 'Đăng nhập thành công!' };
-      }
-      return { success: false, message: 'Đăng nhập thất bại' };
-    } catch (error: any) {
-      console.error('Login error:', error);
-      return { success: false, message: error.message || 'Lỗi đăng nhập' };
-    } finally {
-      setIsLoading(false);
+    const found = await apiService.login(email, pass);
+    if (found) {
+      setUser(found);
+      localStorage.setItem('currentUser', JSON.stringify(found));
+      return true;
     }
+    return false;
   };
 
   const register = async (userData: Omit<User, 'id'>) => {
-    try {
-      setIsLoading(true);
-      const result = await userService.createUser(userData);
-      if (result) {
-        return { success: true, message: 'Đăng ký thành công! Tài khoản của bạn đã được tạo.' };
-      }
-      return { success: false, message: 'Đăng ký thất bại' };
-    } catch (error: any) {
-      console.error('Register error:', error);
-      return { success: false, message: error.message || 'Lỗi đăng ký' };
-    } finally {
-      setIsLoading(false);
+    const newUser: User = { ...userData, id: Date.now().toString() };
+    const success = await apiService.register(newUser);
+    if (success) {
+      setUser(newUser);
+      localStorage.setItem('currentUser', JSON.stringify(newUser));
+      return true;
     }
+    return false;
   };
 
-  const logout = async () => {
-    try {
-      setUser(null);
-      localStorage.removeItem('currentUser');
-      localStorage.removeItem('authToken');
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('currentUser');
     navigate('/');
   };
 
-  // Computed values
-  const isAuthenticated = !!user;
-
-  // Check for session expiration
-  useEffect(() => {
-    if (user) {
-      const checkSession = () => {
-        const storedUser = localStorage.getItem('currentUser');
-        if (!storedUser) {
-          logout();
-        }
-      };
-      
-      // Check session every 5 minutes
-      const interval = setInterval(checkSession, 5 * 60 * 1000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
-
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      login, 
-      register, 
-      logout, 
-      isLoading,
-      isAuthenticated 
-    }}>
+    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
       <RouterContext.Provider value={{ path, navigate, params }}>
          {children}
       </RouterContext.Provider>

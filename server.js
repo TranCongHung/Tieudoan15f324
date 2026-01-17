@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
@@ -15,21 +13,28 @@ app.use(bodyParser.json({ limit: '50mb' }));
 
 // --- UTILS ---
 const safeParse = (str) => {
-    try { return JSON.parse(str); } catch (e) { return []; }
+    if (!str) return [];
+    try { 
+        if (typeof str !== 'string') return str;
+        return JSON.parse(str); 
+    } catch (e) { 
+        return []; 
+    }
 };
 
 const safeStringify = (obj) => {
-    return typeof obj === 'string' ? obj : JSON.stringify(obj);
+    if (typeof obj === 'string') return obj;
+    return JSON.stringify(obj || []);
 };
 
 // --- API ENDPOINTS ---
 
-// Generic CRUD Generator for simple models
-const createCrud = (name, model, jsonFields = []) => {
+// Generic CRUD Generator
+const createCrud = (endpointName, prismaModelName, jsonFields = []) => {
     // GET ALL
-    app.get(`/api/${name}`, async (req, res) => {
+    app.get(`/api/${endpointName}`, async (req, res) => {
         try {
-            let data = await prisma[model].findMany();
+            let data = await prisma[prismaModelName].findMany();
             if (jsonFields.length > 0) {
                 data = data.map(item => {
                     const newItem = { ...item };
@@ -38,40 +43,46 @@ const createCrud = (name, model, jsonFields = []) => {
                 });
             }
             res.json(data);
-        } catch (e) { res.status(500).json({ error: e.message }); }
+        } catch (e) { 
+            console.error(`Error GET /api/${endpointName}:`, e);
+            res.status(500).json({ error: e.message }); 
+        }
     });
 
     // POST
-    app.post(`/api/${name}`, async (req, res) => {
+    app.post(`/api/${endpointName}`, async (req, res) => {
         try {
             const body = { ...req.body };
             jsonFields.forEach(f => { body[f] = safeStringify(body[f]); });
-            const result = await prisma[model].create({ data: body });
+            const result = await prisma[prismaModelName].create({ data: body });
             res.json(result);
         } catch (e) { res.status(500).json({ error: e.message }); }
     });
 
     // PUT
-    app.put(`/api/${name}/:id`, async (req, res) => {
+    app.put(`/api/${endpointName}/:id`, async (req, res) => {
         try {
             const body = { ...req.body };
-            delete body.id; // Tránh lỗi update PK
+            delete body.id;
             jsonFields.forEach(f => { body[f] = safeStringify(body[f]); });
-            const result = await prisma[model].update({ where: { id: req.params.id }, data: body });
+            const result = await prisma[prismaModelName].update({ 
+                where: { id: req.params.id }, 
+                data: body 
+            });
             res.json(result);
         } catch (e) { res.status(500).json({ error: e.message }); }
     });
 
     // DELETE
-    app.delete(`/api/${name}/:id`, async (req, res) => {
+    app.delete(`/api/${endpointName}/:id`, async (req, res) => {
         try {
-            await prisma[model].delete({ where: { id: req.params.id } });
+            await prisma[prismaModelName].delete({ where: { id: req.params.id } });
             res.json({ success: true });
         } catch (e) { res.status(500).json({ error: e.message }); }
     });
 };
 
-// Register CRUDs
+// Khởi tạo các Endpoint
 createCrud('articles', 'article');
 createCrud('milestones', 'milestone', ['quiz']);
 createCrud('questions', 'question', ['options']);
@@ -81,8 +92,9 @@ createCrud('leaders', 'leader');
 createCrud('media', 'media');
 createCrud('documents', 'document');
 createCrud('quiz-results', 'quizResult');
+createCrud('soldiers', 'soldier');
 
-// Special API: Settings (Key-Value style)
+// API Settings (Key-Value)
 app.get('/api/settings', async (req, res) => {
     try {
         const data = await prisma.setting.findMany();
@@ -106,7 +118,7 @@ app.post('/api/settings', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Special API: Login
+// Auth API
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -116,20 +128,24 @@ app.post('/api/login', async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Special API: Comments
+// Comments API
 app.get('/api/comments', async (req, res) => {
-    const { articleId } = req.query;
-    const data = await prisma.comment.findMany({ where: { articleId } });
-    res.json(data);
+    try {
+        const { articleId } = req.query;
+        const data = await prisma.comment.findMany({ where: { articleId: String(articleId) } });
+        res.json(data);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
 app.post('/api/comments', async (req, res) => {
-    const result = await prisma.comment.create({ data: req.body });
-    res.json(result);
+    try {
+        const result = await prisma.comment.create({ data: req.body });
+        res.json(result);
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.listen(PORT, () => {
-    console.log(`[OK] Server chạy tại http://localhost:${PORT}`);
-    console.log(`[OK] Chế độ Database: SQLite (prisma/dev.db)`);
+    console.log(`\n🚀 SERVER ĐANG CHẠY TẠI: http://localhost:${PORT}`);
+    console.log(`📂 DATABASE: SQLite (prisma/dev.db)`);
+    console.log(`✅ Hệ thống Tiểu đoàn 15 sẵn sàng!\n`);
 });
-=======
->>>>>>> 722ff39 (feat: Rebuild authentication system with enhanced security and user experience)
