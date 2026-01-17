@@ -1,16 +1,14 @@
 
-// @ts-ignore
 import { createClient } from '@supabase/supabase-js'
 
 declare var process: any;
 
 const supabaseUrl = 'https://hpgyuftvxnmogbcdlymc.supabase.co'
-// API_KEY được hệ thống tự động lấy từ Environment Variables trên Vercel
+// API_KEY được lấy từ biến môi trường của hệ thống (Vercel/Vite Define)
 const supabaseAnonKey = process.env.API_KEY || '';
 
-if (!supabaseAnonKey) {
-  console.warn("CẢNH BÁO: Chưa tìm thấy API_KEY. Ứng dụng sẽ hoạt động ở chế độ chờ cấu hình.");
+if (!supabaseAnonKey || supabaseAnonKey === 'MISSING_KEY') {
+  console.warn("CẢNH BÁO: Chưa tìm thấy API_KEY hợp lệ trong Environment Variables.");
 }
 
-// Khởi tạo client với fallback để tránh crash app
 export const supabase = createClient(supabaseUrl, supabaseAnonKey || 'MISSING_KEY');
