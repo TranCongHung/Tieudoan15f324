@@ -37,6 +37,7 @@ CREATE TABLE milestones (
     image LONGTEXT,
     icon VARCHAR(50),
     story LONGTEXT,
+    quiz JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
