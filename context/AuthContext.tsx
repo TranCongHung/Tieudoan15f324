@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User } from '../types';
-import { storage } from '../services/storage';
+import { userService } from '../services/api';
+import { supabase } from '../services/supabase';
 
 // --- Router Context & Hooks (Replacement for react-router-dom) ---
 const RouterContext = createContext<{
@@ -62,10 +63,11 @@ export const Navigate: React.FC<{ to: string, replace?: boolean }> = ({ to }) =>
 // --- Auth Context ---
 interface AuthContextType {
   user: User | null;
-  login: (email: string, pass: string) => boolean;
-  register: (user: Omit<User, 'id'>) => boolean;
-  logout: () => void;
+  login: (email: string, pass: string) => Promise<{ success: boolean; message: string }>;
+  register: (user: Omit<User, 'id'>) => Promise<{ success: boolean; message: string }>;
+  logout: () => Promise<void>;
   isLoading: boolean;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>(null!);
@@ -111,43 +113,85 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     } catch (e) {
         console.error("Failed to parse user from storage", e);
-        localStorage.removeItem('currentUser');
     }
     setIsLoading(false);
   }, []);
 
-  const login = (email: string, pass: string) => {
-    const users = storage.getUsers();
-    const found = users.find(u => u.email === email && u.password === pass);
-    if (found) {
-      setUser(found);
-      localStorage.setItem('currentUser', JSON.stringify(found));
-      return true;
+  const login = async (email: string, pass: string) => {
+    try {
+      setIsLoading(true);
+      const result = await userService.login(email, pass);
+      if (result) {
+        // Remove password from stored user data for security
+        const { password, ...userWithoutPassword } = result;
+        setUser(userWithoutPassword);
+        localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+        return { success: true, message: 'Đăng nhập thành công!' };
+      }
+      return { success: false, message: 'Đăng nhập thất bại' };
+    } catch (error: any) {
+      console.error('Login error:', error);
+      return { success: false, message: error.message || 'Lỗi đăng nhập' };
+    } finally {
+      setIsLoading(false);
     }
-    return false;
   };
 
-  const register = (userData: Omit<User, 'id'>) => {
-    const users = storage.getUsers();
-    if (users.find(u => u.email === userData.email)) {
-      return false; // Email exists
+  const register = async (userData: Omit<User, 'id'>) => {
+    try {
+      setIsLoading(true);
+      const result = await userService.createUser(userData);
+      if (result) {
+        return { success: true, message: 'Đăng ký thành công! Tài khoản của bạn đã được tạo.' };
+      }
+      return { success: false, message: 'Đăng ký thất bại' };
+    } catch (error: any) {
+      console.error('Register error:', error);
+      return { success: false, message: error.message || 'Lỗi đăng ký' };
+    } finally {
+      setIsLoading(false);
     }
-    const newUser: User = { ...userData, id: Date.now().toString() };
-    storage.createUser(newUser);
-    // Auto login after register
-    setUser(newUser);
-    localStorage.setItem('currentUser', JSON.stringify(newUser));
-    return true;
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('currentUser');
+  const logout = async () => {
+    try {
+      setUser(null);
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('authToken');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     navigate('/');
   };
 
+  // Computed values
+  const isAuthenticated = !!user;
+
+  // Check for session expiration
+  useEffect(() => {
+    if (user) {
+      const checkSession = () => {
+        const storedUser = localStorage.getItem('currentUser');
+        if (!storedUser) {
+          logout();
+        }
+      };
+      
+      // Check session every 5 minutes
+      const interval = setInterval(checkSession, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      login, 
+      register, 
+      logout, 
+      isLoading,
+      isAuthenticated 
+    }}>
       <RouterContext.Provider value={{ path, navigate, params }}>
          {children}
       </RouterContext.Provider>

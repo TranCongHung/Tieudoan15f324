@@ -1,17 +1,26 @@
 
 import React, { useEffect, useState } from 'react';
+<<<<<<< HEAD
 import { apiService } from '../services/api';
 import { Article } from '../types';
 import { Calendar, User, ChevronRight, ArrowRight, Star, Loader2 } from 'lucide-react';
 import { Link } from '../context/AuthContext';
+=======
+import { articleService } from '../services/api';
+import { Article } from '../services/supabase';
+import { Calendar, User, ChevronRight, ArrowRight, Star, LogOut } from 'lucide-react';
+import { Link, useAuth } from '../context/AuthContext';
+>>>>>>> 722ff39 (feat: Rebuild authentication system with enhanced security and user experience)
 import { useSiteSettings } from '../context/SiteContext';
 
 const Home: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const { settings } = useSiteSettings();
+  const { user, logout } = useAuth();
 
   useEffect(() => {
+<<<<<<< HEAD
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -25,12 +34,49 @@ const Home: React.FC = () => {
         }
     };
     fetchData();
+=======
+    const loadArticles = async () => {
+      try {
+        const data = await articleService.getAllArticles();
+        setArticles(data);
+      } catch (error) {
+        console.error('Failed to load articles:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadArticles();
+>>>>>>> 722ff39 (feat: Rebuild authentication system with enhanced security and user experience)
   }, []);
 
   return (
     <div className="pb-12 bg-gray-50">
       {/* Hero Section - Dữ liệu lấy từ Settings trong Database */}
       <div className="relative min-h-[85vh] md:min-h-[750px] overflow-hidden group flex items-center">
+        {/* User Welcome Bar */}
+        {user && (
+          <div className="absolute top-0 left-0 right-0 z-20 bg-white/95 backdrop-blur-sm border-b border-gray-200">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Xin chào, <span className="font-bold" style={{ color: settings.primaryColor }}>{user.name}</span></p>
+                  <p className="text-xs text-gray-500">{user.rank_name} - {user.position}</p>
+                </div>
+              </div>
+              <button
+                onClick={logout}
+                className="flex items-center space-x-2 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Đăng xuất</span>
+              </button>
+            </div>
+          </div>
+        )}
         <div className="absolute inset-0">
           <img
             className="w-full h-full object-cover transform scale-105 group-hover:scale-100 transition-transform duration-[2s]"
@@ -75,7 +121,7 @@ const Home: React.FC = () => {
                 <Link
                    to="/quiz"
                    className="w-full sm:w-auto px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-bold rounded backdrop-blur-sm border border-white/30 transition-all flex items-center justify-center uppercase tracking-wide text-sm hover:border-white"
-                >
+                 >
                    Kiểm tra nhận thức
                 </Link>
               </div>
@@ -99,6 +145,7 @@ const Home: React.FC = () => {
            </div>
 
            {loading ? (
+<<<<<<< HEAD
                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                    <Loader2 className="w-10 h-10 animate-spin mb-4" />
                    <p className="font-serif italic">Đang đồng bộ dữ liệu từ đơn vị...</p>
@@ -120,6 +167,33 @@ const Home: React.FC = () => {
                        <Link to={`/article/${article.id}`} className="block mb-3">
                           <h3 className="text-lg md:text-xl font-display font-bold text-gray-900 leading-snug group-hover:text-green-700 transition-colors line-clamp-2">
                               {article.title}
+=======
+             <div className="text-center py-8">
+               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-r-2 border-t-2 border-gray-900"></div>
+               <p className="mt-4 text-gray-600">Đang tải bài viết...</p>
+             </div>
+           ) : (
+             <div className="grid gap-8 md:gap-10 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+               {articles.length > 0 ? (
+                 articles.map((article) => (
+                   <article key={article.id} className="group flex flex-col h-full bg-white hover:-translate-y-2 transition-transform duration-300 rounded-2xl">
+                     <Link to={`/article/${article.id}`} className="flex-shrink-0 h-56 md:h-64 w-full relative overflow-hidden rounded-2xl shadow-md mb-5">
+                       <img className="h-full w-full object-cover transform group-hover:scale-110 transition-transform duration-700" src={article.image_url || "https://picsum.photos/400/300?random=" + article.id} alt={article.title} />
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+                       <div className="absolute top-4 left-4 bg-white/90 text-green-900 text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow-sm backdrop-blur-md">
+                           Tin hoạt động
+                       </div>
+                     </Link>
+                     <div className="flex-1 flex flex-col px-2">
+                       <div className="flex items-center text-xs font-bold text-gray-400 mb-3 space-x-3 uppercase tracking-wide">
+                          <span className="flex items-center"><Calendar className="h-3 w-3 mr-1 text-yellow-600"/> {article.date || 'N/A'}</span>
+                          <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                          <span className="flex items-center" style={{ color: settings.primaryColor }}><User className="h-3 w-3 mr-1"/> {article.author || 'Admin'}</span>
+                       </div>
+                       <Link to={`/article/${article.id}`} className="block mb-3">
+                          <h3 className="text-lg md:text-xl font-display font-bold text-gray-900 leading-snug group-hover:text-green-700 transition-colors line-clamp-2">
+                             {article.title}
+>>>>>>> 722ff39 (feat: Rebuild authentication system with enhanced security and user experience)
                           </h3>
                        </Link>
                        <p className="text-gray-500 line-clamp-3 leading-relaxed font-serif text-sm text-justify-pretty mb-4 flex-grow">
@@ -132,6 +206,7 @@ const Home: React.FC = () => {
                           onMouseEnter={(e) => e.currentTarget.style.borderColor = settings.primaryColor}
                           onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
                        >
+<<<<<<< HEAD
                            Đọc chi tiết
                        </Link>
                      </div>
@@ -142,6 +217,25 @@ const Home: React.FC = () => {
                      </div>
                  )}
                </div>
+=======
+                          Đọc chi tiết
+                       </Link>
+                     </div>
+                   </article>
+                 ))
+               ) : (
+                 <div className="col-span-full text-center py-8">
+                   <p className="text-gray-500">Chưa có bài viết nào.</p>
+                   <Link 
+                     to="/admin" 
+                     className="inline-block mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+                   >
+                     Tạo bài viết đầu tiên
+                   </Link>
+                 </div>
+               )}
+             </div>
+>>>>>>> 722ff39 (feat: Rebuild authentication system with enhanced security and user experience)
            )}
         </div>
       </div>
@@ -154,7 +248,7 @@ const Home: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            <Link to="/quiz" className="group relative h-72 md:h-80 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all">
+            <Link to="/history" className="group relative h-72 md:h-80 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all">
                 <div className="absolute inset-0">
                     <img src="https://picsum.photos/600/800?random=100" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 grayscale group-hover:grayscale-0" alt="Quiz"/>
                     <div className="absolute inset-0 transition-colors duration-500 mix-blend-multiply" style={{ background: `${settings.primaryColor}CC` }}></div>
@@ -164,6 +258,7 @@ const Home: React.FC = () => {
                         <Star className="w-6 h-6 md:w-8 md:h-8" style={{ color: settings.secondaryColor }} fill="currentColor"/>
                     </div>
                     <div>
+<<<<<<< HEAD
                         <h3 className="text-xl md:text-2xl font-bold text-white mb-2 md:mb-3 font-display tracking-wide">Kiểm tra nhận thức</h3>
                         <p className="text-green-100 text-xs md:text-sm font-light leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
                             Ngân hàng đề thi chính trị, quân sự trực tuyến.
@@ -185,6 +280,8 @@ const Home: React.FC = () => {
                         <div className="font-display font-black text-2xl md:text-3xl" style={{ color: settings.secondaryColor }}>324</div>
                     </div>
                     <div>
+=======
+>>>>>>> 722ff39 (feat: Rebuild authentication system with enhanced security and user experience)
                         <h3 className="text-xl md:text-2xl font-bold text-white mb-2 md:mb-3 font-display tracking-wide">Lịch sử truyền thống</h3>
                         <p className="text-green-100 text-xs md:text-sm font-light leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
                             Hành trình 60 năm Đoàn Ngự Bình anh hùng.
@@ -196,7 +293,28 @@ const Home: React.FC = () => {
                 </div>
             </Link>
 
-             <Link to="/about" className="group relative h-72 md:h-80 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all">
+            <Link to="/quiz" className="group relative h-72 md:h-80 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all">
+                <div className="absolute inset-0">
+                    <img src="https://picsum.photos/600/800?random=101" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 grayscale group-hover:grayscale-0" alt="History"/>
+                    <div className="absolute inset-0 bg-red-900/80 transition-colors duration-500 mix-blend-multiply"></div>
+                </div>
+                <div className="relative h-full p-8 md:p-10 flex flex-col justify-between items-center text-center border-4 border-transparent hover:border-white/30 transition-all rounded-3xl">
+                    <div className="bg-white/10 w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center backdrop-blur-md shadow-inner group-hover:-translate-y-2 transition-transform duration-500">
+                        <div className="font-display font-black text-2xl md:text-3xl" style={{ color: settings.secondaryColor }}>60</div>
+                    </div>
+                    <div>
+                        <h3 className="text-xl md:text-2xl font-bold text-white mb-2 md:mb-3 font-display tracking-wide">Kiểm tra nhận thức</h3>
+                        <p className="text-green-100 text-xs md:text-sm font-light leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
+                            Hệ thống trắc nghiệm kiến thức chính trị, quân sự, pháp luật.
+                        </p>
+                    </div>
+                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] group-hover:translate-x-2 transition-transform flex items-center" style={{ color: settings.secondaryColor }}>
+                        Tham gia ngay <ArrowRight className="w-3 h-3 md:w-4 md:h-4 ml-2"/>
+                    </span>
+                </div>
+            </Link>
+
+            <Link to="/about" className="group relative h-72 md:h-80 rounded-3xl overflow-hidden shadow-xl hover:shadow-2xl transition-all">
                 <div className="absolute inset-0">
                     <img src="https://picsum.photos/600/800?random=102" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 grayscale group-hover:grayscale-0" alt="About"/>
                     <div className="absolute inset-0 bg-blue-900/80 transition-colors duration-500 mix-blend-multiply"></div>

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 import { Article, User, QuizResult, Milestone, MediaItem, Leader, Score, DocumentFile, Comment, SiteSettings, Question } from '../types';
 import { storage } from './storage';
@@ -93,3 +94,5 @@ class ApiClient {
 }
 
 export const apiService = new ApiClient();
+=======
+>>>>>>> 722ff39 (feat: Rebuild authentication system with enhanced security and user experience)

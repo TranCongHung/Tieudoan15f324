@@ -9,15 +9,28 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ArticleDetail from './pages/ArticleDetail';
-import { AuthProvider, useLocation, Navigate } from './context/AuthContext';
+import { AuthProvider, useLocation, Navigate, useAuth } from './context/AuthContext';
 import { SiteProvider } from './context/SiteContext';
+import { supabase } from './services/supabase';
 
 function AppContent() {
     const { pathname } = useLocation();
+    const { user } = useAuth();
 
+    // Routes that require authentication
+    const protectedRoutes = ['/quiz', '/article/'];
+    
+    // Check if current route requires authentication and user is not logged in
+    const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+    
     if (pathname === '/login') return <Login />;
     if (pathname === '/register') return <Register />;
     if (pathname === '/admin') return <AdminDashboard />;
+    
+    // Redirect to login if trying to access protected route without authentication
+    if (isProtectedRoute && !user) {
+        return <Navigate to="/login" />;
+    }
     
     if (pathname === '/' || pathname === '') return <Layout><Home /></Layout>;
     if (pathname === '/history') return <Layout><History /></Layout>;
@@ -30,13 +43,13 @@ function AppContent() {
 }
 
 function App() {
-  return (
-    <SiteProvider>
-        <AuthProvider>
-          <AppContent />
-        </AuthProvider>
-    </SiteProvider>
-  );
+    return (
+        <SiteProvider>
+            <AuthProvider>
+                <AppContent />
+            </AuthProvider>
+        </SiteProvider>
+    );
 }
 
 export default App;

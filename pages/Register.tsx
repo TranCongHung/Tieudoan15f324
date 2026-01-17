@@ -7,39 +7,101 @@ const Register: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    rank: '',
+    rank_name: '',
     position: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
   const { settings } = useSiteSettings();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.name || formData.name.trim().length < 2) {
+      newErrors.name = 'Họ và tên phải có ít nhất 2 ký tự';
+    }
+    
+    if (!formData.email || !formData.email.includes('@') || !formData.email.includes('.')) {
+      newErrors.email = 'Email không hợp lệ';
+    }
+    
+    if (!formData.rank_name || formData.rank_name.trim().length < 2) {
+      newErrors.rank_name = 'Cấp bậc không được để trống';
+    }
+    
+    if (!formData.position || formData.position.trim().length < 2) {
+      newErrors.position = 'Chức vụ không được để trống';
+    }
+    
+    if (!formData.password || formData.password.length < 6) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+    }
+    
+    if (formData.password && !/(?=.*[a-zA-Z])(?=.*[0-9])/.test(formData.password)) {
+      newErrors.password = 'Mật khẩu phải chứa cả chữ và số';
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.rank || !formData.position || !formData.password) {
-      setError("Vui lòng điền đầy đủ thông tin.");
+    
+    if (!validateForm()) {
       return;
     }
+    
+    setLoading(true);
+    setError('');
 
-    const success = register({
-      ...formData,
-      role: 'user' // Default role
-    });
-
-    if (success) {
-      alert("Đăng ký thành công!");
-      navigate('/');
-    } else {
-      setError('Gmail này đã được đăng ký.');
+    try {
+      const result = await register({
+        name: formData.name,
+        email: formData.email,
+        rank_name: formData.rank_name,
+        position: formData.position,
+        password: formData.password,
+        role: 'user'
+      });
+      
+      if (result.success) {
+        alert('Đăng ký thành công! Tài khoản của bạn đã được tạo. Bạn sẽ được chuyển đến trang đăng nhập.');
+        // Redirect to login page after successful registration
+        setTimeout(() => {
+          navigate('/login');
+        }, 1500);
+      } else {
+        setError(result.message);
+      }
+    } catch (err: any) {
+      setError('Lỗi hệ thống: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -153,10 +215,10 @@ const Register: React.FC = () => {
                                 </div>
                                 <input
                                     id="rank"
-                                    name="rank"
+                                    name="rank_name"
                                     type="text"
                                     required
-                                    value={formData.rank}
+                                    value={formData.rank_name}
                                     onChange={handleChange}
                                     className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
                                     style={{ '--tw-ring-color': settings.secondaryColor } as any}
@@ -201,23 +263,65 @@ const Register: React.FC = () => {
                                 required
                                 value={formData.password}
                                 onChange={handleChange}
-                                className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm"
+                                className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm ${
+                                    errors.password ? 'border-red-500' : 'border-gray-300'
+                                }`}
                                 style={{ '--tw-ring-color': settings.secondaryColor } as any}
                                 placeholder="••••••••"
                             />
                         </div>
+                        {errors.password && (
+                            <p className="mt-1 text-xs text-red-600">{errors.password}</p>
+                        )}
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div className="relative group">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1 ml-1 transition-colors" style={{ color: settings.primaryColor }}>Xác nhận mật khẩu</label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Lock className="h-5 w-5 text-gray-400 transition-colors" />
+                            </div>
+                            <input
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                type="password"
+                                required
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:border-transparent bg-gray-50 focus:bg-white transition-all text-sm ${
+                                    errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                                }`}
+                                style={{ '--tw-ring-color': settings.secondaryColor } as any}
+                                placeholder="••••••••"
+                            />
+                        </div>
+                        {errors.confirmPassword && (
+                            <p className="mt-1 text-xs text-red-600">{errors.confirmPassword}</p>
+                        )}
                     </div>
 
                     <div className="pt-2">
                         <button
                             type="submit"
+                            disabled={loading}
                             className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-bold focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5 transition-all uppercase tracking-wide"
                             style={{ 
                                 backgroundColor: settings.primaryColor,
-                                color: '#ffffff'
+                                color: loading ? '#9CA3AF' : '#ffffff'
                             }}
                         >
-                            Hoàn tất đăng ký <ArrowRight className="ml-2 w-4 h-4" />
+                            {loading ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12v8a8 8 0 4-4 4 0-4-4 4v-8"></path>
+                                    </svg>
+                                    <span className="ml-2">Đang đăng ký...</span>
+                                </>
+                            ) : (
+                                'Hoàn tất đăng ký <ArrowRight className="ml-2 w-4 h-4" />'
+                            )}
                         </button>
                     </div>
                 </form>

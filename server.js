@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 import express from 'express';
 import cors from 'cors';
@@ -130,3 +131,5 @@ app.listen(PORT, () => {
     console.log(`[OK] Server chạy tại http://localhost:${PORT}`);
     console.log(`[OK] Chế độ Database: SQLite (prisma/dev.db)`);
 });
+=======
+>>>>>>> 722ff39 (feat: Rebuild authentication system with enhanced security and user experience)

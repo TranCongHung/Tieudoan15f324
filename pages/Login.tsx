@@ -4,25 +4,36 @@ import { useSiteSettings } from '../context/SiteContext';
 import { Shield, Lock, Mail, X, ArrowRight, User } from 'lucide-react';
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@su324.vn');
+  const [password, setPassword] = useState('admin');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
   const { settings } = useSiteSettings();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(email, password)) {
-      const storedUser = localStorage.getItem('currentUser');
-      const user = storedUser ? JSON.parse(storedUser) : null;
-      if (user?.role === 'admin') {
-        navigate('/admin');
+    setLoading(true);
+    setError('');
+
+    try {
+      const result = await login(email, password);
+      if (result.success) {
+        // Redirect based on user role
+        const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
       } else {
-        navigate('/');
+        setError(result.message);
       }
-    } else {
-      setError('Tài khoản hoặc mật khẩu không chính xác.');
+    } catch (err: any) {
+      setError('Lỗi hệ thống: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -157,10 +168,21 @@ const Login: React.FC = () => {
 
                     <button
                         type="submit"
+                        disabled={loading}
                         className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-sm font-bold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:-translate-y-0.5 transition-all uppercase tracking-wide"
                         style={{ backgroundColor: settings.primaryColor }}
                     >
-                        Đăng nhập hệ thống <ArrowRight className="ml-2 w-4 h-4" />
+                        {loading ? (
+                            <>
+                                <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12v8a8 8 0 4-4-4 4 0-4-4-4 4v-8"></path>
+                                </svg>
+                                <span>Đang đăng nhập...</span>
+                            </>
+                        ) : (
+                            'Đăng nhập hệ thống <ArrowRight className="ml-2 w-4 h-4" />'
+                        )}
                     </button>
                 </form>
 

@@ -68,12 +68,21 @@ export interface MediaItem {
 export interface User {
   id: string;
   name: string;
+<<<<<<< HEAD
   email: string;
   rank: string;
   position: string;
   unit?: string;
   password?: string;
+=======
+  email: string; // Gmail
+  rank_name: string; // Cấp bậc
+  position: string; // Chức vụ
+  unit?: string; // Đơn vị
+  password?: string; // Password optional for stored user data (security)
+>>>>>>> 722ff39 (feat: Rebuild authentication system with enhanced security and user experience)
   role: 'admin' | 'user';
+  created_at?: string;
 }
 
 export interface QuizResult {

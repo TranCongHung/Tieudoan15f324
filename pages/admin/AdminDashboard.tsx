@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Article, User, Question, Score, DocumentFile, MediaItem, Leader, SiteSettings, Milestone } from '../../types';
-import { apiService } from '../../services/api';
+import { 
+  userService, 
+  articleService, 
+  questionService, 
+  scoreService, 
+  documentService, 
+  mediaService, 
+  leaderService,
+  milestoneService
+} from '../../services/api';
 // Removed AI service import
 import { 
   Users, FileText, HelpCircle, Award, Folder, Plus, Trash2, Edit, Save, X, Loader2, Film, Music, LogOut, Search, ChevronLeft, ChevronRight, Filter,
@@ -183,14 +192,14 @@ const AdminDashboard: React.FC = () => {
 
   const refreshData = async () => {
     try {
-        setArticles(await apiService.getArticles());
-        setUsersList(await apiService.getUsers());
-        setQuestions(await apiService.getQuestions());
-        setScores(await apiService.getScores());
-        setDocuments(await apiService.getDocuments());
-        setMediaItems(await apiService.getMedia());
-        setLeaders(await apiService.getLeaders());
-        setMilestones(await apiService.getHistory());
+        setArticles(await articleService.getAllArticles());
+        setUsersList(await userService.getAllUsers());
+        setQuestions(await questionService.getAllQuestions());
+        setScores(await scoreService.getAllScores());
+        setDocuments(await documentService.getAllDocuments());
+        setMediaItems(await mediaService.getAllMedia());
+        setLeaders(await leaderService.getAllLeaders());
+        setMilestones(await milestoneService.getAllMilestones());
     } catch (error) {
         console.error("Failed to load data:", error);
     }
@@ -222,14 +231,14 @@ const AdminDashboard: React.FC = () => {
     
     try {
         switch (type) {
-            case 'articles': await apiService.deleteArticle(id); break;
-            case 'history': await apiService.deleteMilestone(id); break;
-            case 'personnel': await apiService.deleteUser(id); break;
-            case 'questions': await apiService.deleteQuestion(id); break;
-            case 'scores': await apiService.deleteScore(id); break;
-            case 'documents': await apiService.deleteDocument(id); break;
-            case 'media': await apiService.deleteMedia(id); break;
-            case 'leaders': await apiService.deleteLeader(id); break;
+            case 'articles': await articleService.deleteArticle(id); break;
+            case 'history': await milestoneService.deleteMilestone(id); break;
+            case 'personnel': await userService.deleteUser(id); break;
+            case 'questions': await questionService.deleteQuestion(id); break;
+            case 'scores': await scoreService.deleteScore(id); break;
+            case 'documents': await documentService.deleteDocument(id); break;
+            case 'media': await mediaService.deleteMedia(id); break;
+            case 'leaders': await leaderService.deleteLeader(id); break;
         }
         await refreshData();
     } catch (e) {
