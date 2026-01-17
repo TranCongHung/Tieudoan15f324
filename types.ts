@@ -9,20 +9,21 @@ export interface Article {
   author: string;
 }
 
-export interface Soldier {
-  id: string;
-  name: string;
-  rank: string; // Cấp bậc
-  position: string; // Chức vụ
-  unit: string; // Đơn vị
-  dateOfBirth: string;
-}
-
 export interface Leader {
   id: string;
   name: string;
-  role: string; // Chức vụ hiển thị (VD: Tiểu đoàn trưởng)
-  image: string; // URL ảnh
+  role: string;
+  image: string;
+}
+
+// Adding missing Soldier interface used in storage.ts
+export interface Soldier {
+  id: string;
+  name: string;
+  rank: string;
+  position: string;
+  unit: string;
+  dateOfBirth: string;
 }
 
 export interface Question {
@@ -35,21 +36,21 @@ export interface Question {
 
 export interface Score {
   id: string;
-  unitName: string; // Tên đơn vị được chấm
-  militaryScore: number;    // Quân sự
-  politicalScore: number;   // Chính trị
-  logisticsScore: number;   // Hậu cần
-  disciplineScore: number;  // Xây dựng chính quy
-  totalScore: number;       // Điểm tổng kết (Trung bình cộng)
+  unitName: string;
+  militaryScore: number;
+  politicalScore: number;
+  logisticsScore: number;
+  disciplineScore: number;
+  totalScore: number;
   date: string;
 }
 
 export interface DocumentFile {
   id: string;
   name: string;
-  isFolder: boolean; // True nếu là thư mục
-  parentId: string | null; // ID của thư mục cha (null nếu ở gốc)
-  type?: string; // Loại file (pdf, docx...) hoặc Label cho thư mục
+  isFolder: boolean;
+  parentId: string | null;
+  type?: string;
   date: string;
   size?: string;
 }
@@ -58,8 +59,8 @@ export interface MediaItem {
   id: string;
   title: string;
   type: 'video' | 'audio';
-  url: string; // YouTube embed link or MP3 url
-  thumbnail?: string; // For videos
+  url: string;
+  thumbnail?: string;
   description?: string;
   date: string;
 }
@@ -67,11 +68,11 @@ export interface MediaItem {
 export interface User {
   id: string;
   name: string;
-  email: string; // Gmail
-  rank: string; // Cấp bậc
-  position: string; // Chức vụ
-  unit?: string; // Đơn vị
-  password: string;
+  email: string;
+  rank: string;
+  position: string;
+  unit?: string;
+  password?: string;
   role: 'admin' | 'user';
 }
 
@@ -80,7 +81,7 @@ export interface QuizResult {
   userId: string;
   userName: string;
   userRank: string;
-  unit: string; // Đơn vị của người dùng (nếu có, hoặc lấy từ user info)
+  unit: string;
   topic: string;
   score: number;
   totalQuestions: number;
@@ -92,49 +93,34 @@ export interface Comment {
   articleId: string;
   userId: string;
   userName: string;
-  userRank?: string; // Optional rank to display
+  userRank?: string;
   content: string;
   date: string;
 }
 
-// History Milestone Interface
 export interface Milestone {
   id: string;
   year: string;
   title: string;
   subtitle: string;
-  content: string; // Mô tả ngắn hiển thị trên timeline
+  content: string;
   image: string;
-  icon: string; // Tên icon (Flag, Map, Star, Award...)
-  story: string; // Nội dung chi tiết (HTML) cho phần đọc sách
-  quiz: Question[]; // Câu hỏi kiểm tra cho mốc này
+  icon: string;
+  story: string;
+  quiz: Question[];
 }
 
-// Site Settings Interface (WordPress-like customization)
 export interface SiteSettings {
   siteTitle: string;
   siteSubtitle: string;
-  logoUrl: string; // URL icon/logo
-  primaryColor: string; // Màu chủ đạo (Header, Footer) - HEX
-  secondaryColor: string; // Màu nhấn (Buttons, Highlights) - HEX
-  
-  // Home Page Settings
+  logoUrl: string;
+  primaryColor: string;
+  secondaryColor: string;
   heroImage: string;
   heroTitle: string;
   heroSubtitle: string;
-  
-  // Contact Info
   contactAddress: string;
   contactEmail: string;
   contactPhone: string;
-  
-  // Advanced
-  customCss: string; // Cho phép admin chèn CSS tùy chỉnh
+  customCss: string;
 }
-
-// Menu items type for navigation
-export type NavigationItem = {
-  name: string;
-  path: string;
-  current: boolean;
-};

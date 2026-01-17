@@ -1,103 +1,70 @@
 # Cổng Thông Tin Điện Tử Tiểu Đoàn 15 - Sư Đoàn 324
 
-![Tiểu đoàn 15 Banner](https://picsum.photos/1000/300?grayscale&blur=2)
+Hệ thống quản lý thông tin nội bộ, giáo dục truyền thống và kiểm tra nhận thức chính trị tích hợp cơ sở dữ liệu SQLite cục bộ.
 
-Chào mừng đến với mã nguồn Cổng thông tin điện tử của Tiểu đoàn 15, Sư đoàn 324. Ứng dụng này được thiết kế nhằm mục đích tuyên truyền, giáo dục truyền thống, quản lý thông tin nội bộ và kiểm tra nhận thức chính trị cho cán bộ, chiến sĩ.
+## 🚀 Hướng Dẫn Cài Đặt (Dành cho máy mới)
 
-## 🌟 Tính Năng Chính
+Để sử dụng hệ thống sau khi tải (git clone) về, đồng chí thực hiện theo các bước sau:
 
-### 1. Trang Chủ (Home)
-*   **Giao diện hiện đại:** Thiết kế Responsive, tương thích với cả máy tính và điện thoại.
-*   **Tin tức hoạt động:** Hiển thị các bài viết, sự kiện mới nhất của đơn vị.
-*   **Liên kết nhanh:** Truy cập nhanh các tính năng quan trọng.
+### 1. Cài đặt môi trường
+Đảm bảo máy tính đã cài đặt **Node.js** (Phiên bản 18 trở lên).
 
-### 2. Lịch sử Truyền thống (History)
-*   **Hiệu ứng Đọc sách (Book Effect):** Trải nghiệm xem lịch sử hào hùng của đơn vị dưới dạng lật trang sách tương tác.
-*   **Các mốc son lịch sử:** Trình bày chi tiết các giai đoạn từ khi thành lập đến nay.
-*   **Chế độ ngang (Landscape):** Tối ưu hóa trải nghiệm đọc trên thiết bị di động.
-
-### 3. Kiểm tra Nhận thức (Quiz)
-*   **Thi trắc nghiệm:** Hệ thống câu hỏi về chính trị, quân sự, pháp luật.
-*   **Bảng xếp hạng (Leaderboard):** Xếp hạng thi đua giữa các cá nhân và đơn vị.
-*   **Bảo mật:** Chế độ ẩn đáp án sau khi thi để đảm bảo công bằng.
-
-### 4. Thư viện (Media)
-*   **Video & Âm thanh:** Kho lưu trữ phim tài liệu và các bài hát truyền thống.
-*   **Trình phát đa phương tiện:** Tích hợp trình phát video và audio trực tiếp.
-
-### 5. Quản trị Hệ thống (Admin Dashboard)
-*   **Quản lý Nội dung:** Trình soạn thảo văn bản (Rich Text Editor) để đăng bài viết.
-*   **Quản lý Nhân sự:** Thêm, sửa, xóa người dùng và phân quyền.
-*   **Quản lý Thi đua:** Chấm điểm và theo dõi biểu đồ thi đua giữa các đại đội (Biểu đồ Recharts).
-*   **Ngân hàng câu hỏi:** Nhập câu hỏi từ file Excel (.xlsx).
-*   **Quản lý Tài liệu:** Hệ thống quản lý file và thư mục trực quan.
-
-## 🛠 Công Nghệ Sử Dụng
-
-Dự án được xây dựng dựa trên các công nghệ web hiện đại, không cần Backend phức tạp (sử dụng LocalStorage để giả lập cơ sở dữ liệu):
-
-*   **Core:** [React 18](https://react.dev/)
-*   **Language:** [TypeScript](https://www.typescriptlang.org/)
-*   **Styling:** [Tailwind CSS](https://tailwindcss.com/)
-*   **Icons:** [Lucide React](https://lucide.dev/)
-*   **Charts:** [Recharts](https://recharts.org/)
-*   **Data Handling:** [SheetJS (XLSX)](https://sheetjs.com/)
-
-## 🚀 Hướng Dẫn Cài Đặt & Chạy
-
-Do cấu trúc dự án đơn giản (sử dụng ES Modules trực tiếp trên trình duyệt qua CDN), bạn có thể chạy dự án theo cách truyền thống hoặc dùng các công cụ build hiện đại.
-
-### Yêu cầu
-*   Node.js (v16 trở lên)
-
-### Bước 1: Clone dự án
-```bash
-git clone https://github.com/your-repo/tieu-doan-15.git
-cd tieu-doan-15
-```
-
-### Bước 2: Cài đặt Dependencies
+### 2. Cài đặt thư viện (Dependencies)
+Mở terminal (CMD hoặc PowerShell) tại thư mục dự án và chạy:
 ```bash
 npm install
 ```
 
-### Bước 3: Chạy ứng dụng
+### 3. Khởi tạo Cơ sở dữ liệu (SQLite)
+Hệ thống sử dụng SQLite giúp lưu trữ dữ liệu ngay trong thư mục dự án (file `prisma/dev.db`). Chạy lệnh sau để tạo cấu trúc bảng:
 ```bash
-npm start
-# Hoặc nếu sử dụng Vite
-npm run dev
+npx prisma db push
 ```
 
-Truy cập `http://localhost:3000` trên trình duyệt.
+### 4. Chạy ứng dụng
+Hệ thống gồm 2 phần cần chạy song song:
 
-## 🔐 Tài Khoản Mặc Định
+*   **Cửa sổ 1 - Chạy Backend (Xử lý dữ liệu):**
+    ```bash
+    npm run server
+    ```
+    *(Server sẽ chạy tại http://localhost:5000)*
 
-Dữ liệu được khởi tạo sẵn trong `LocalStorage` khi chạy lần đầu:
-
-*   **Quản trị viên (Admin):**
-    *   Email: `admin@su324.vn`
-    *   Password: `admin`
-*   **Người dùng (User):**
-    *   Email: `user@su324.vn`
-    *   Password: `123`
-
-## 📁 Cấu Trúc Thư Mục
-
-```
-src/
-├── components/     # Các thành phần giao diện dùng chung (Layout, v.v.)
-├── context/        # Quản lý trạng thái đăng nhập và điều hướng (AuthContext)
-├── pages/          # Các trang chính (Home, History, Quiz, Admin...)
-│   └── admin/      # Giao diện quản trị
-├── services/       # Xử lý dữ liệu (StorageService)
-├── types/          # Định nghĩa kiểu dữ liệu TypeScript
-├── App.tsx         # Component gốc và Routing
-└── index.tsx       # Điểm khởi chạy ứng dụng
-```
-
-## 📜 Giấy Phép
-
-Dự án nội bộ phục vụ công tác giáo dục và tuyên truyền của đơn vị.
+*   **Cửa sổ 2 - Chạy Frontend (Giao diện):**
+    ```bash
+    npm run dev
+    ```
+    *(Giao diện sẽ chạy tại http://localhost:3000)*
 
 ---
-&copy; 2024 Tiểu đoàn 15 - Sư đoàn 324.
+
+## 🔐 Thông tin Đăng nhập mặc định
+
+Sau khi chạy, đồng chí có thể đăng nhập bằng tài khoản Quản trị để bắt đầu nhập dữ liệu:
+
+*   **Tài khoản Admin:** `admin@su324.vn`
+*   **Mật khẩu:** `admin`
+
+---
+
+## 🛠 Các tính năng chính
+
+1.  **Trang chủ:** Hiển thị bài viết, tin tức hoạt động của Tiểu đoàn.
+2.  **Lịch sử (Đoàn Ngự Bình):** Xem lịch sử dưới dạng sách lật tương tác, có tích hợp bài thi sau mỗi chương.
+3.  **Kiểm tra nhận thức:** Hệ thống thi trắc nghiệm trực tuyến, có bảng xếp hạng thi đua thời gian thực.
+4.  **Thư viện:** Kho lưu trữ Video (Youtube/Upload) và Audio (Nhạc truyền thống).
+5.  **Quản trị (Admin):**
+    *   Soạn thảo bài viết với trình soạn thảo trực quan (như Word).
+    *   Quản lý nhân sự, cấp bậc, chức vụ.
+    *   Chấm điểm thi đua đại đội và xem biểu đồ thống kê.
+    *   Quản lý kho tài liệu, văn bản (hỗ trợ tạo thư mục, kéo thả tệp).
+    *   Cấu hình giao diện (Đổi logo, màu sắc, ảnh nền) ngay trên trình duyệt.
+
+## 📂 Cấu trúc thư mục
+*   `/prisma`: Chứa cấu hình database và file dữ liệu `dev.db`.
+*   `/server.js`: Mã nguồn xử lý dữ liệu (Node.js).
+*   `/src`: Mã nguồn giao diện (React + Vite).
+*   `/services/api.ts`: Cầu nối giao tiếp giữa Giao diện và Database.
+
+---
+**Lưu ý:** Nếu đồng chí copy thư mục dự án sang máy khác, hãy copy cả file `prisma/dev.db` để giữ nguyên các dữ liệu đã nhập.

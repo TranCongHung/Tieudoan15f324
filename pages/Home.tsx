@@ -1,21 +1,35 @@
+
 import React, { useEffect, useState } from 'react';
-import { storage } from '../services/storage';
+import { apiService } from '../services/api';
 import { Article } from '../types';
-import { Calendar, User, ChevronRight, ArrowRight, Star } from 'lucide-react';
+import { Calendar, User, ChevronRight, ArrowRight, Star, Loader2 } from 'lucide-react';
 import { Link } from '../context/AuthContext';
 import { useSiteSettings } from '../context/SiteContext';
 
 const Home: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
   const { settings } = useSiteSettings();
 
   useEffect(() => {
-    setArticles(storage.getArticles());
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            // Đồng bộ dữ liệu bài viết trực tiếp từ API/Database
+            const data = await apiService.getArticles();
+            setArticles(data);
+        } catch (error) {
+            console.error("Lỗi đồng bộ bài viết:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+    fetchData();
   }, []);
 
   return (
     <div className="pb-12 bg-gray-50">
-      {/* Hero Section - Dynamic */}
+      {/* Hero Section - Dữ liệu lấy từ Settings trong Database */}
       <div className="relative min-h-[85vh] md:min-h-[750px] overflow-hidden group flex items-center">
         <div className="absolute inset-0">
           <img
@@ -23,14 +37,12 @@ const Home: React.FC = () => {
             src={settings.heroImage || "https://picsum.photos/1920/1080?grayscale&blur=2"}
             alt="Hero Background"
           />
-          {/* Gradient Overlay based on Primary Color */}
           <div 
              className="absolute inset-0"
              style={{ 
-                 background: `linear-gradient(to right, ${settings.primaryColor}F2, ${settings.primaryColor}CC, ${settings.primaryColor}4D)` // Hex transparency mapping
+                 background: `linear-gradient(to right, ${settings.primaryColor}F2, ${settings.primaryColor}CC, ${settings.primaryColor}4D)` 
              }}
           ></div>
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
         </div>
         
         <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 flex flex-col justify-center py-20 md:py-0">
@@ -71,7 +83,7 @@ const Home: React.FC = () => {
         </div>
       </div>
 
-      {/* Featured News - Negative Margin for overlap effect */}
+      {/* Featured News - Dữ liệu lấy từ Articles trong Database */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 mt-8 md:-mt-16">
         <div className="bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-6 md:p-12 mb-16 border border-gray-100">
            <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-8 md:mb-10 pb-6 border-b border-gray-100 gap-4">
@@ -86,50 +98,58 @@ const Home: React.FC = () => {
              </Link>
            </div>
 
-           <div className="grid gap-8 md:gap-10 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-             {articles.map((article) => (
-               <article key={article.id} className="group flex flex-col h-full bg-white hover:-translate-y-2 transition-transform duration-300 rounded-2xl">
-                 <Link to={`/article/${article.id}`} className="flex-shrink-0 h-56 md:h-64 w-full relative overflow-hidden rounded-2xl shadow-md mb-5">
-                   <img className="h-full w-full object-cover transform group-hover:scale-110 transition-transform duration-700" src={article.imageUrl} alt={article.title} />
-                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
-                   <div className="absolute top-4 left-4 bg-white/90 text-green-900 text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shadow-sm backdrop-blur-md">
-                       Tin hoạt động
-                   </div>
-                 </Link>
-                 <div className="flex-1 flex flex-col px-2">
-                   <div className="flex items-center text-xs font-bold text-gray-400 mb-3 space-x-3 uppercase tracking-wide">
-                      <span className="flex items-center"><Calendar className="h-3 w-3 mr-1 text-yellow-600"/> {article.date}</span>
-                      <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                      <span className="flex items-center" style={{ color: settings.primaryColor }}><User className="h-3 w-3 mr-1"/> {article.author}</span>
-                   </div>
-                   <Link to={`/article/${article.id}`} className="block mb-3">
-                      <h3 className="text-lg md:text-xl font-display font-bold text-gray-900 leading-snug group-hover:text-green-700 transition-colors line-clamp-2">
-                          {article.title}
-                      </h3>
-                   </Link>
-                   <p className="text-gray-500 line-clamp-3 leading-relaxed font-serif text-sm text-justify-pretty mb-4 flex-grow">
-                       {article.summary}
-                   </p>
-                   <Link 
-                      to={`/article/${article.id}`} 
-                      className="inline-flex items-center font-bold text-xs uppercase tracking-widest border-b-2 border-transparent transition-all pb-1 w-fit"
-                      style={{ color: settings.primaryColor, borderColor: 'transparent' }}
-                      onMouseEnter={(e) => e.currentTarget.style.borderColor = settings.primaryColor}
-                      onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
-                   >
-                       Đọc chi tiết
-                   </Link>
-                 </div>
-               </article>
-             ))}
-           </div>
+           {loading ? (
+               <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                   <Loader2 className="w-10 h-10 animate-spin mb-4" />
+                   <p className="font-serif italic">Đang đồng bộ dữ liệu từ đơn vị...</p>
+               </div>
+           ) : (
+               <div className="grid gap-8 md:gap-10 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                 {articles.length > 0 ? articles.map((article) => (
+                   <article key={article.id} className="group flex flex-col h-full bg-white hover:-translate-y-2 transition-transform duration-300 rounded-2xl">
+                     <Link to={`/article/${article.id}`} className="flex-shrink-0 h-56 md:h-64 w-full relative overflow-hidden rounded-2xl shadow-md mb-5">
+                       <img className="h-full w-full object-cover transform group-hover:scale-110 transition-transform duration-700" src={article.imageUrl} alt={article.title} />
+                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+                     </Link>
+                     <div className="flex-1 flex flex-col px-2">
+                       <div className="flex items-center text-xs font-bold text-gray-400 mb-3 space-x-3 uppercase tracking-wide">
+                          <span className="flex items-center"><Calendar className="h-3 w-3 mr-1 text-yellow-600"/> {article.date}</span>
+                          <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                          <span className="flex items-center" style={{ color: settings.primaryColor }}><User className="h-3 w-3 mr-1"/> {article.author}</span>
+                       </div>
+                       <Link to={`/article/${article.id}`} className="block mb-3">
+                          <h3 className="text-lg md:text-xl font-display font-bold text-gray-900 leading-snug group-hover:text-green-700 transition-colors line-clamp-2">
+                              {article.title}
+                          </h3>
+                       </Link>
+                       <p className="text-gray-500 line-clamp-3 leading-relaxed font-serif text-sm text-justify-pretty mb-4 flex-grow">
+                           {article.summary}
+                       </p>
+                       <Link 
+                          to={`/article/${article.id}`} 
+                          className="inline-flex items-center font-bold text-xs uppercase tracking-widest border-b-2 border-transparent transition-all pb-1 w-fit"
+                          style={{ color: settings.primaryColor, borderColor: 'transparent' }}
+                          onMouseEnter={(e) => e.currentTarget.style.borderColor = settings.primaryColor}
+                          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'transparent'}
+                       >
+                           Đọc chi tiết
+                       </Link>
+                     </div>
+                   </article>
+                 )) : (
+                     <div className="col-span-full py-20 text-center text-gray-400 font-serif italic border-2 border-dashed border-gray-100 rounded-xl">
+                         Chưa có bài viết nào được đăng tải. Đồng chí vui lòng vào trang Quản trị để cập nhật.
+                     </div>
+                 )}
+               </div>
+           )}
         </div>
       </div>
       
-      {/* Quick Links Section */}
+      {/* Các liên kết khám phá */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-24">
         <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl font-display font-bold text-green-900 uppercase tracking-tight">Khám phá đơn vị</h2>
+            <h2 className="text-3xl md:text-4xl font-display font-bold text-green-900 uppercase tracking-tight">Cổng thông tin nghiệp vụ</h2>
             <div className="w-16 h-1.5 mx-auto mt-4 md:mt-6 rounded-full opacity-80" style={{ background: settings.secondaryColor }}></div>
         </div>
 
@@ -146,11 +166,11 @@ const Home: React.FC = () => {
                     <div>
                         <h3 className="text-xl md:text-2xl font-bold text-white mb-2 md:mb-3 font-display tracking-wide">Kiểm tra nhận thức</h3>
                         <p className="text-green-100 text-xs md:text-sm font-light leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
-                            Hệ thống trắc nghiệm kiến thức chính trị, quân sự, pháp luật.
+                            Ngân hàng đề thi chính trị, quân sự trực tuyến.
                         </p>
                     </div>
                     <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] group-hover:translate-x-2 transition-transform flex items-center" style={{ color: settings.secondaryColor }}>
-                        Tham gia ngay <ArrowRight className="w-3 h-3 md:w-4 md:h-4 ml-2"/>
+                        Vào thi ngay <ArrowRight className="w-3 h-3 md:w-4 md:h-4 ml-2"/>
                     </span>
                 </div>
             </Link>
@@ -162,12 +182,12 @@ const Home: React.FC = () => {
                 </div>
                 <div className="relative h-full p-8 md:p-10 flex flex-col justify-between items-center text-center border-4 border-transparent hover:border-white/30 transition-all rounded-3xl">
                     <div className="bg-white/10 w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center backdrop-blur-md shadow-inner group-hover:-translate-y-2 transition-transform duration-500">
-                        <div className="font-display font-black text-2xl md:text-3xl" style={{ color: settings.secondaryColor }}>60</div>
+                        <div className="font-display font-black text-2xl md:text-3xl" style={{ color: settings.secondaryColor }}>324</div>
                     </div>
                     <div>
                         <h3 className="text-xl md:text-2xl font-bold text-white mb-2 md:mb-3 font-display tracking-wide">Lịch sử truyền thống</h3>
                         <p className="text-green-100 text-xs md:text-sm font-light leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
-                            Hành trình vẻ vang "Trung dũng, kiên cường, liên tục tấn công".
+                            Hành trình 60 năm Đoàn Ngự Bình anh hùng.
                         </p>
                     </div>
                     <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] group-hover:translate-x-2 transition-transform flex items-center" style={{ color: settings.secondaryColor }}>
@@ -188,11 +208,11 @@ const Home: React.FC = () => {
                     <div>
                         <h3 className="text-xl md:text-2xl font-bold text-white mb-2 md:mb-3 font-display tracking-wide">Giới thiệu đơn vị</h3>
                         <p className="text-green-100 text-xs md:text-sm font-light leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
-                            Cơ cấu tổ chức, ban chỉ huy và các thành tích nổi bật.
+                            Cơ cấu tổ chức và ban chỉ huy tiểu đoàn.
                         </p>
                     </div>
                     <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] group-hover:translate-x-2 transition-transform flex items-center" style={{ color: settings.secondaryColor }}>
-                        Chi tiết <ArrowRight className="w-3 h-3 md:w-4 md:h-4 ml-2"/>
+                        Xem chi tiết <ArrowRight className="w-3 h-3 md:w-4 md:h-4 ml-2"/>
                     </span>
                 </div>
             </Link>
