@@ -4,27 +4,41 @@ import { supabase } from './supabase';
 
 class ApiClient {
     /**
-     * Hàm xử lý lỗi tập trung: Đảm bảo trả về STRING trực quan.
+     * Hàm bóc tách lỗi "Cú chốt": Chống lại [object Object] 100%
      */
     private parseError(error: any, context: string): string {
         if (!error) return `${context}: Lỗi không xác định.`;
         
-        console.error(`Chi tiết lỗi tại [${context}]:`, error);
+        console.error(`[DEBUG API] ${context}:`, error);
 
-        if (typeof error === 'string') return `${context}: ${error}`;
+        let message = "";
 
-        // Bóc tách lỗi từ Supabase PostgrestError
-        let msg = error.message || "Lỗi hệ thống";
-        if (error.details) msg += ` (Chi tiết: ${error.details})`;
-        if (error.hint) msg += ` - Gợi ý: ${error.hint}`;
-        if (error.code) msg = `[Mã ${error.code}] ${msg}`;
-
-        // Xử lý trường hợp lỗi API Key cụ thể
-        if (msg.toLowerCase().includes("api key") || msg.toLowerCase().includes("jwt")) {
-            return `${context}: Khóa API (Supabase Key) không hợp lệ hoặc chưa được thiết lập trên Vercel.`;
+        if (typeof error === 'string') {
+            message = error;
+        } else if (error.message) {
+            // Nếu là object lỗi của Supabase
+            message = error.message;
+            if (error.details) message += ` (Chi tiết: ${error.details})`;
+            if (error.hint) message += ` - Gợi ý: ${error.hint}`;
+        } else {
+            // Nếu là object lạ, ép kiểu sang JSON string để đọc được nội dung
+            try {
+                message = JSON.stringify(error);
+            } catch (e) {
+                message = String(error);
+            }
         }
 
-        return `${context}: ${msg}`;
+        // Kiểm tra các lỗi bảo mật/cấu hình phổ biến
+        if (message.includes("Invalid API key") || message.includes("JWT") || message.includes("MISSING_KEY")) {
+            return `LỖI CẤU HÌNH: Khóa API (Supabase Key) không hợp lệ hoặc chưa được thiết lập trên Vercel. Vui lòng kiểm tra lại biến môi trường API_KEY.`;
+        }
+
+        if (message.includes("failed to fetch") || message.includes("NetworkError")) {
+            return `${context}: Lỗi kết nối mạng hoặc Supabase đang bị chặn.`;
+        }
+
+        return `${context}: ${message}`;
     }
 
     // --- AUTHENTICATION ---
@@ -79,7 +93,7 @@ class ApiClient {
             
             if (error) throw new Error(this.parseError(error, "Tải bài viết"));
 
-            return (data || []).map(item => ({
+            return (data || []).map((item: any) => ({
                 id: item.id,
                 title: item.title,
                 summary: item.summary,
@@ -144,7 +158,7 @@ class ApiClient {
             
             if (error) throw new Error(this.parseError(error, "Tải lịch sử"));
 
-            return (data || []).map(m => ({
+            return (data || []).map((m: any) => ({
                 ...m,
                 quiz: typeof m.quiz === 'string' ? JSON.parse(m.quiz) : (m.quiz || [])
             }));
@@ -198,7 +212,7 @@ class ApiClient {
         try {
             const { data, error } = await supabase.from('users').select('*');
             if (error) throw new Error(this.parseError(error, "Tải người dùng"));
-            return (data || []).map(u => ({
+            return (data || []).map((u: any) => ({
                 ...u,
                 rank: u.rank_name || u.rank
             })) as User[];
@@ -280,7 +294,7 @@ class ApiClient {
         try {
             const { data, error } = await supabase.from('questions').select('*');
             if (error) throw new Error(this.parseError(error, "Tải câu hỏi"));
-            return (data || []).map(q => ({
+            return (data || []).map((q: any) => ({
                 id: q.id,
                 questionText: q.question_text,
                 options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
@@ -336,7 +350,7 @@ class ApiClient {
         try {
             const { data, error } = await supabase.from('scores').select('*').order('date', { ascending: false });
             if (error) throw new Error(this.parseError(error, "Tải điểm số"));
-            return (data || []).map(s => ({
+            return (data || []).map((s: any) => ({
                 id: s.id,
                 unitName: s.unit_name,
                 militaryScore: s.military_score,
@@ -401,7 +415,7 @@ class ApiClient {
         try {
             const { data, error } = await supabase.from('documents').select('*');
             if (error) throw new Error(this.parseError(error, "Tải tài liệu"));
-            return (data || []).map(d => ({
+            return (data || []).map((d: any) => ({
                 id: d.id,
                 name: d.name,
                 isFolder: d.is_folder,
@@ -535,7 +549,7 @@ class ApiClient {
         try {
             const { data, error } = await supabase.from('quiz_results').select('*').order('timestamp', { ascending: false });
             if (error) throw new Error(this.parseError(error, "Tải kết quả thi"));
-            return (data || []).map(r => ({
+            return (data || []).map((r: any) => ({
                 id: r.id,
                 userId: r.user_id,
                 userName: r.user_name,
@@ -576,7 +590,7 @@ class ApiClient {
         try {
             const { data, error } = await supabase.from('comments').select('*').eq('article_id', articleId).order('date', { ascending: true });
             if (error) throw new Error(this.parseError(error, "Tải bình luận"));
-            return (data || []).map(c => ({
+            return (data || []).map((c: any) => ({
                 id: c.id,
                 articleId: c.article_id,
                 userId: c.user_id,
