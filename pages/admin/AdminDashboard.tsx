@@ -4,7 +4,7 @@ import { apiService } from '../../services/api';
 // Removed AI service import
 import { 
   Users, FileText, HelpCircle, Award, Folder, Plus, Trash2, Edit, Save, X, Loader2, Film, Music, LogOut, Search, ChevronLeft, ChevronRight, Filter,
-  Image as ImageIcon, Calendar, User as UserIcon, Eye, ArrowLeft, CheckCircle, 
+  Image as ImageIcon, Calendar, User as UserIcon, Eye, ArrowLeft, CheckCircle, Check,
   Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, AlignJustify, 
   Type, Quote, Link as LinkIcon, Undo, Redo, Code, Monitor, Palette, Upload, Maximize, Move, Shield,
   Download, FileSpreadsheet, BarChart3, CalendarDays, FolderPlus, File, Home, DownloadCloud, Briefcase, Layout as LayoutIcon, Clock, Scissors
@@ -67,6 +67,23 @@ const AdminDashboard: React.FC = () => {
   const [editorIcon, setEditorIcon] = useState('Flag'); // For History
   
   const [featuredImgSourceType, setFeaturedImgSourceType] = useState<'link' | 'upload'>('link');
+  
+  // Awareness Questions for History
+  const [awarenessQuestions, setAwarenessQuestions] = useState<Question[]>([]);
+  const [newQuestion, setNewQuestion] = useState<Partial<Question>>({ questionText: '', options: ['', '', '', ''], correctAnswerIndex: 0, explanation: '' });
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  
+  // Question Management Enhancement
+  const [selectedMilestoneForQuestions, setSelectedMilestoneForQuestions] = useState<string>('all');
+  const [isQuestionEditorOpen, setIsQuestionEditorOpen] = useState(false);
+  const [questionBeingEdited, setQuestionBeingEdited] = useState<Question | null>(null);
+  const [questionFormData, setQuestionFormData] = useState<Partial<Question & { milestoneId?: string }>>({
+    questionText: '',
+    options: ['', '', '', ''],
+    correctAnswerIndex: 0,
+    explanation: '',
+    milestoneId: ''
+  });
   
   // Advanced Editor States
   const [isVisualMode, setIsVisualMode] = useState(true);
@@ -424,6 +441,8 @@ const AdminDashboard: React.FC = () => {
             setEditorYear(item.year);
             setEditorSubtitle(item.subtitle);
             setEditorIcon(item.icon);
+            // Load awareness questions if exist
+            setAwarenessQuestions(item.quiz || []);
         }
 
         const img = item.imageUrl || item.image;
@@ -446,8 +465,13 @@ const AdminDashboard: React.FC = () => {
             setEditorYear(new Date().getFullYear().toString());
             setEditorSubtitle('');
             setEditorIcon('Flag');
+            // Reset awareness questions
+            setAwarenessQuestions([]);
         }
     }
+    // Reset new question form and editing state
+    setNewQuestion({ questionText: '', options: ['', '', '', ''], correctAnswerIndex: 0, explanation: '' });
+    setEditingQuestionId(null);
   };
 
   const execCmd = (command: string, value: string | undefined = undefined) => {
@@ -609,7 +633,6 @@ const AdminDashboard: React.FC = () => {
               await apiService.createArticle(newArticle);
           }
       } else if (activeTab === 'history') {
-          const existingQuiz = editingItem?.quiz || [];
           const newMilestone: Milestone = {
               id,
               year: editorYear,
@@ -619,7 +642,7 @@ const AdminDashboard: React.FC = () => {
               story: editorContent, 
               image: editorImage || 'https://picsum.photos/600/400',
               icon: editorIcon,
-              quiz: existingQuiz
+              quiz: awarenessQuestions
           };
           
           if (editingItem) {
@@ -889,7 +912,134 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // --- AWARENESS QUESTIONS MANAGEMENT ---
+  const handleAddAwarenessQuestion = () => {
+      if (!newQuestion.questionText || newQuestion.options?.some(opt => !opt)) {
+          alert("Vui lòng nhập câu hỏi và tất cả các đáp án");
+          return;
+      }
+      
+      const question: Question = {
+          id: editingQuestionId || `q_${Date.now()}`,
+          questionText: newQuestion.questionText || '',
+          options: newQuestion.options || ['', '', '', ''],
+          correctAnswerIndex: newQuestion.correctAnswerIndex || 0,
+          explanation: newQuestion.explanation || ''
+      };
+      
+      if (editingQuestionId) {
+          setAwarenessQuestions(prev => prev.map(q => q.id === editingQuestionId ? question : q));
+          setEditingQuestionId(null);
+      } else {
+          setAwarenessQuestions(prev => [...prev, question]);
+      }
+      
+      setNewQuestion({ questionText: '', options: ['', '', '', ''], correctAnswerIndex: 0, explanation: '' });
+  };
+
+  const handleEditAwarenessQuestion = (question: Question) => {
+      setNewQuestion(question);
+      setEditingQuestionId(question.id);
+  };
+
+  const handleDeleteAwarenessQuestion = (id: string) => {
+      if (window.confirm("Xóa câu hỏi này?")) {
+          setAwarenessQuestions(prev => prev.filter(q => q.id !== id));
+          if (editingQuestionId === id) {
+              setEditingQuestionId(null);
+              setNewQuestion({ questionText: '', options: ['', '', '', ''], correctAnswerIndex: 0, explanation: '' });
+          }
+      }
+  };
+
+  const handleUpdateQuestionOption = (index: number, value: string) => {
+      setNewQuestion(prev => ({
+          ...prev,
+          options: prev.options ? prev.options.map((opt, i) => i === index ? value : opt) : ['', '', '', '']
+      }));
+  };
+
+  // --- ENHANCED QUESTION MANAGEMENT ---
+  const openQuestionEditor = (question: Question | null) => {
+      if (question) {
+          setQuestionBeingEdited(question);
+          setQuestionFormData({
+              questionText: question.questionText,
+              options: [...question.options],
+              correctAnswerIndex: question.correctAnswerIndex,
+              explanation: question.explanation,
+              milestoneId: (question as any).milestoneId || ''
+          });
+      } else {
+          setQuestionBeingEdited(null);
+          const defaultMilestoneId = selectedMilestoneForQuestions !== 'all' ? selectedMilestoneForQuestions : '';
+          setQuestionFormData({
+              questionText: '',
+              options: ['', '', '', ''],
+              correctAnswerIndex: 0,
+              explanation: '',
+              milestoneId: defaultMilestoneId
+          });
+      }
+      setIsQuestionEditorOpen(true);
+  };
+
+  const handleSaveQuestion = async () => {
+      if (!questionFormData.questionText?.trim()) {
+          alert('Vui lòng nhập nội dung câu hỏi');
+          return;
+      }
+      if (!questionFormData.milestoneId) {
+          alert('Vui lòng chọn giai đoạn lịch sử cho câu hỏi');
+          return;
+      }
+      if (questionFormData.options?.some(opt => !opt?.trim())) {
+          alert('Vui lòng nhập tất cả các đáp án');
+          return;
+      }
+
+      try {
+          const questionData: any = {
+              id: questionBeingEdited?.id || `q_${Date.now()}`,
+              questionText: questionFormData.questionText || '',
+              options: questionFormData.options || ['', '', '', ''],
+              correctAnswerIndex: questionFormData.correctAnswerIndex || 0,
+              explanation: questionFormData.explanation || '',
+              milestoneId: questionFormData.milestoneId || ''
+          };
+
+          if (questionBeingEdited) {
+              await apiService.updateQuestion(questionBeingEdited.id, questionData);
+          } else {
+              await apiService.createQuestion(questionData);
+          }
+
+          setIsQuestionEditorOpen(false);
+          setQuestionBeingEdited(null);
+          await refreshData();
+      } catch (error) {
+          alert('Lỗi khi lưu câu hỏi: ' + error);
+      }
+  };
+
+  const handleQuestionOptionChange = (index: number, value: string) => {
+      setQuestionFormData(prev => ({
+          ...prev,
+          options: prev.options?.map((opt, i) => i === index ? value : opt) || ['', '', '', '']
+      }));
+  };
+
+  // Get questions filtered by milestone
+  const getQuestionsForMilestone = () => {
+      if (selectedMilestoneForQuestions === 'all') {
+          return questions;
+      }
+      const milestone = milestones.find(m => m.id === selectedMilestoneForQuestions);
+      return milestone?.quiz || [];
+  };
+
   const filteredData = getFilteredData();
+
   const chartData = getChartData();
 
   // Toolbar Button
@@ -904,7 +1054,137 @@ const AdminDashboard: React.FC = () => {
       </button>
   );
 
+  // --- RENDER QUESTION EDITOR ---
+  const renderQuestionEditor = () => {
+      if (!isQuestionEditorOpen) return null;
+
+      return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fade-in overflow-y-auto">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden animate-scale-up my-8">
+                  <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-green-50 to-blue-50">
+                      <div>
+                          <h3 className="font-bold text-xl text-gray-800 flex items-center">
+                              <HelpCircle className="w-6 h-6 mr-2 text-green-600" />
+                              {questionBeingEdited ? 'Chỉnh sửa câu hỏi' : 'Thêm câu hỏi mới'}
+                          </h3>
+                          <p className="text-xs text-gray-500 mt-1">Quản lý ngân hàng câu hỏi trắc nghiệm</p>
+                      </div>
+                      <button onClick={() => setIsQuestionEditorOpen(false)} className="text-gray-400 hover:text-gray-600 p-1">
+                          <X className="w-6 h-6" />
+                      </button>
+                  </div>
+                  
+                  <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                      {/* Milestone Selection */}
+                      <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Giai đoạn lịch sử <span className="text-red-500">*</span></label>
+                          <select
+                              value={questionFormData.milestoneId || ''}
+                              onChange={(e) => setQuestionFormData(prev => ({ ...prev, milestoneId: e.target.value }))}
+                              className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all font-medium"
+                          >
+                              <option value="">-- Chọn giai đoạn --</option>
+                              {milestones.map(m => (
+                                  <option key={m.id} value={m.id}>
+                                      Năm {m.year} - {m.title}
+                                  </option>
+                              ))}
+                          </select>
+                          {!questionFormData.milestoneId && (
+                              <p className="text-xs text-orange-600 mt-1">⚠️ Vui lòng chọn giai đoạn để lưu câu hỏi</p>
+                          )}
+                      </div>
+
+                      {/* Question Text */}
+                      <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Nội dung câu hỏi <span className="text-red-500">*</span></label>
+                          <textarea
+                              value={questionFormData.questionText || ''}
+                              onChange={(e) => setQuestionFormData(prev => ({ ...prev, questionText: e.target.value }))}
+                              rows={3}
+                              placeholder="Nhập nội dung câu hỏi..."
+                              className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                          />
+                      </div>
+
+                      {/* Answer Options */}
+                      <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-3">Các lựa chọn <span className="text-red-500">*</span></label>
+                          <div className="space-y-3 bg-gray-50 p-4 rounded-lg border-2 border-dashed border-gray-300">
+                              {questionFormData.options?.map((option, index) => (
+                                  <div key={index} className="flex items-center space-x-3">
+                                      <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
+                                          questionFormData.correctAnswerIndex === index 
+                                              ? 'bg-gradient-to-br from-green-500 to-green-600' 
+                                              : 'bg-gray-400'
+                                      }`}>
+                                          {String.fromCharCode(65 + index)}
+                                      </div>
+                                      <input
+                                          type="text"
+                                          value={option || ''}
+                                          onChange={(e) => handleQuestionOptionChange(index, e.target.value)}
+                                          placeholder={`Lựa chọn ${String.fromCharCode(65 + index)}`}
+                                          className="flex-1 p-2 border border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                                      />
+                                      <input
+                                          type="radio"
+                                          name="correctAnswer"
+                                          checked={questionFormData.correctAnswerIndex === index}
+                                          onChange={() => setQuestionFormData(prev => ({ ...prev, correctAnswerIndex: index }))}
+                                          className="w-5 h-5 cursor-pointer accent-green-600"
+                                          title="Chọn đáp án đúng"
+                                      />
+                                  </div>
+                              ))}
+                          </div>
+                      </div>
+
+                      {/* Correct Answer */}
+                      <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                          <p className="text-sm font-semibold text-green-900 mb-2 flex items-center">
+                              <CheckCircle className="w-4 h-4 mr-2" /> Đáp án đúng
+                          </p>
+                          <div className="bg-white p-3 rounded-lg font-semibold text-green-700">
+                              {String.fromCharCode(65 + (questionFormData.correctAnswerIndex || 0))} - {questionFormData.options?.[questionFormData.correctAnswerIndex || 0] || 'Chọn lựa chọn bên trên'}
+                          </div>
+                      </div>
+
+                      {/* Explanation */}
+                      <div>
+                          <label className="block text-sm font-bold text-gray-700 mb-2">Giải thích / Hướng dẫn (Tùy chọn)</label>
+                          <textarea
+                              value={questionFormData.explanation || ''}
+                              onChange={(e) => setQuestionFormData(prev => ({ ...prev, explanation: e.target.value }))}
+                              rows={2}
+                              placeholder="Giải thích chi tiết về câu hỏi này..."
+                              className="w-full p-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                          />
+                      </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+                      <button
+                          onClick={() => setIsQuestionEditorOpen(false)}
+                          className="px-6 py-2 text-gray-600 font-bold border border-gray-300 rounded-lg hover:bg-gray-100 transition-all"
+                      >
+                          Hủy
+                      </button>
+                      <button
+                          onClick={handleSaveQuestion}
+                          className="px-8 py-2 bg-gradient-to-r from-green-600 to-green-700 text-white font-bold rounded-lg hover:shadow-lg transition-all flex items-center"
+                      >
+                          <Save className="w-4 h-4 mr-2" />
+                          {questionBeingEdited ? 'Cập nhật' : 'Thêm câu hỏi'}
+                      </button>
+                  </div>
+              </div>
+          </div>
+      );
+  };
+
   // --- RENDER APPEARANCE SETTINGS ---
+
   const renderAppearanceSettings = () => (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 animate-fade-in max-w-4xl mx-auto">
           {/* ... (Appearance code same as previous) ... */}
@@ -1237,6 +1517,154 @@ const AdminDashboard: React.FC = () => {
                               placeholder={activeTab === 'articles' ? "Mô tả ngắn về bài viết..." : "Nội dung hiển thị trên timeline (ngắn gọn)..."}
                           ></textarea>
                       </div>
+
+                      {activeTab === 'history' && (
+                          <div className="border-t border-gray-300 pt-6">
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-3 flex items-center">
+                                  <HelpCircle className="w-4 h-4 mr-2" />
+                                  Câu hỏi nhận thức về giai đoạn
+                              </label>
+                              
+                              {/* Add/Edit Question Form */}
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 space-y-3">
+                                  <div>
+                                      <label className="text-xs text-gray-600 font-medium block mb-1">Câu hỏi</label>
+                                      <input 
+                                          type="text" 
+                                          value={newQuestion.questionText || ''} 
+                                          onChange={(e) => setNewQuestion(prev => ({ ...prev, questionText: e.target.value }))}
+                                          placeholder="Nhập câu hỏi..."
+                                          className="w-full p-2 border border-blue-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500"
+                                      />
+                                  </div>
+
+                                  {/* Options */}
+                                  <div className="space-y-2">
+                                      <label className="text-xs text-gray-600 font-medium block">Các đáp án (Chọn radio để đánh dấu đáp án đúng)</label>
+                                      {newQuestion.options?.map((option, idx) => (
+                                          <div 
+                                              key={idx} 
+                                              className={`p-2 rounded border-2 transition-all cursor-pointer flex items-center gap-2 ${
+                                                  newQuestion.correctAnswerIndex === idx 
+                                                      ? 'bg-green-100 border-green-500' 
+                                                      : 'bg-white border-blue-300 hover:border-blue-400'
+                                              }`}
+                                              onClick={() => setNewQuestion(prev => ({ ...prev, correctAnswerIndex: idx }))}
+                                          >
+                                              <input 
+                                                  type="radio" 
+                                                  name="correctAnswer" 
+                                                  checked={newQuestion.correctAnswerIndex === idx}
+                                                  onChange={() => setNewQuestion(prev => ({ ...prev, correctAnswerIndex: idx }))}
+                                                  className="w-4 h-4 cursor-pointer"
+                                              />
+                                              <span className="text-xs font-bold text-gray-700 min-w-fit">
+                                                  {String.fromCharCode(65 + idx)})
+                                              </span>
+                                              <input 
+                                                  type="text" 
+                                                  value={option} 
+                                                  onChange={(e) => handleUpdateQuestionOption(idx, e.target.value)}
+                                                  placeholder={`Nhập đáp án ${String.fromCharCode(65 + idx)}...`}
+                                                  className="flex-1 p-1.5 border border-gray-300 rounded text-xs focus:ring-green-500 focus:border-green-500 bg-white"
+                                              />
+                                              {newQuestion.correctAnswerIndex === idx && (
+                                                  <Check className="w-4 h-4 text-green-600 font-bold flex-shrink-0" />
+                                              )}
+                                          </div>
+                                      ))}
+                                  </div>
+
+                                  {/* Explanation */}
+                                  <div>
+                                      <label className="text-xs text-gray-600 font-medium block mb-1">Giải thích (Tùy chọn)</label>
+                                      <textarea 
+                                          value={newQuestion.explanation || ''} 
+                                          onChange={(e) => setNewQuestion(prev => ({ ...prev, explanation: e.target.value }))}
+                                          placeholder="Giải thích đáp án đúng..."
+                                          rows={2}
+                                          className="w-full p-1.5 border border-blue-300 rounded text-xs focus:ring-blue-500 focus:border-blue-500"
+                                      />
+                                  </div>
+
+                                  {/* Action Buttons */}
+                                  <div className="flex gap-2">
+                                      <button 
+                                          onClick={handleAddAwarenessQuestion}
+                                          className="flex-1 px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition-colors flex items-center justify-center"
+                                      >
+                                          <Plus className="w-3 h-3 mr-1" />
+                                          {editingQuestionId ? 'Cập nhật' : 'Thêm câu hỏi'}
+                                      </button>
+                                      {editingQuestionId && (
+                                          <button 
+                                              onClick={() => {
+                                                  setEditingQuestionId(null);
+                                                  setNewQuestion({ questionText: '', options: ['', '', '', ''], correctAnswerIndex: 0, explanation: '' });
+                                              }}
+                                              className="flex-1 px-3 py-2 bg-gray-400 text-white text-xs font-bold rounded hover:bg-gray-500 transition-colors"
+                                          >
+                                              Hủy
+                                          </button>
+                                      )}
+                                  </div>
+                              </div>
+
+                              {/* Questions List */}
+                              {awarenessQuestions.length > 0 && (
+                                  <div className="space-y-2 max-h-[400px] overflow-y-auto custom-scrollbar">
+                                      {awarenessQuestions.map((question, idx) => (
+                                          <div key={question.id} className="bg-white border-2 border-gray-300 rounded-lg p-4 hover:border-gray-400 hover:shadow-md transition-all">
+                                              <div className="text-sm font-bold text-gray-900 mb-3 flex items-start justify-between">
+                                                  <span className="flex-1">Câu {idx + 1}: {question.questionText}</span>
+                                              </div>
+                                              <div className="text-xs text-gray-700 mb-3 ml-2 space-y-2 bg-gray-50 p-3 rounded">
+                                                  {question.options.map((opt, optIdx) => (
+                                                      <div key={optIdx} className={`p-2 rounded flex items-start gap-2 ${
+                                                          optIdx === question.correctAnswerIndex 
+                                                              ? 'bg-green-100 border border-green-500 text-green-900 font-bold' 
+                                                              : 'bg-gray-100 border border-gray-200 text-gray-700'
+                                                      }`}>
+                                                          <span className="font-bold min-w-fit">{String.fromCharCode(65 + optIdx)})</span>
+                                                          <span className="flex-1">{opt}</span>
+                                                          {optIdx === question.correctAnswerIndex && (
+                                                              <Check className="w-4 h-4 flex-shrink-0 text-green-700 font-bold" />
+                                                          )}
+                                                      </div>
+                                                  ))}
+                                              </div>
+                                              {question.explanation && (
+                                                  <div className="text-xs text-gray-600 mb-3 italic border-l-2 border-blue-300 pl-2">
+                                                      <strong>Giải thích:</strong> {question.explanation}
+                                                  </div>
+                                              )}
+                                              <div className="flex gap-2 mt-3">
+                                                  <button 
+                                                      onClick={() => handleEditAwarenessQuestion(question)}
+                                                      className="flex-1 px-2 py-1.5 bg-yellow-500 text-white text-xs font-bold rounded hover:bg-yellow-600 transition-colors flex items-center justify-center"
+                                                  >
+                                                      <Edit className="w-3 h-3 mr-1" /> Sửa
+                                                  </button>
+                                                  <button 
+                                                      onClick={() => handleDeleteAwarenessQuestion(question.id)}
+                                                      className="flex-1 px-2 py-1.5 bg-red-500 text-white text-xs font-bold rounded hover:bg-red-600 transition-colors flex items-center justify-center"
+                                                  >
+                                                      <Trash2 className="w-3 h-3 mr-1" /> Xóa
+                                                  </button>
+                                              </div>
+                                          </div>
+                                      ))}
+                                  </div>
+                              )}
+                              
+                              {awarenessQuestions.length === 0 && (
+                                  <div className="bg-gray-100 rounded-lg p-4 text-center">
+                                      <HelpCircle className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                                      <p className="text-xs text-gray-500">Chưa có câu hỏi nào. Thêm câu hỏi để kiểm tra nhận thức.</p>
+                                  </div>
+                              )}
+                          </div>
+                      )}
                   </div>
               </div>
           </div>
@@ -1571,6 +1999,9 @@ const AdminDashboard: React.FC = () => {
                             <button onClick={handleImportExcelClick} className="flex items-center bg-green-600 text-white px-4 py-2.5 rounded-lg hover:bg-green-700 shadow-md transition-all font-bold text-sm">
                                 <FileSpreadsheet className="h-4 w-4 mr-2"/> Nhập Excel
                             </button>
+                            <button onClick={() => openQuestionEditor(null)} className="flex items-center bg-yellow-500 text-white px-4 py-2.5 rounded-lg hover:bg-yellow-600 shadow-md transition-all font-bold text-sm">
+                                <Plus className="h-4 w-4 mr-2"/> Thêm câu hỏi
+                            </button>
                          </>
                      )}
                      
@@ -1687,6 +2118,21 @@ const AdminDashboard: React.FC = () => {
                         className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                       />
                   </div>
+                  {activeTab === 'questions' && (
+                      <div className="ml-4 flex items-center space-x-2">
+                          <Filter className="h-4 w-4 text-gray-500" />
+                          <select
+                              value={selectedMilestoneForQuestions}
+                              onChange={(e) => setSelectedMilestoneForQuestions(e.target.value)}
+                              className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm font-medium"
+                          >
+                              <option value="all">Tất cả giai đoạn</option>
+                              {milestones.map(m => (
+                                  <option key={m.id} value={m.id}>Năm {m.year} - {m.title}</option>
+                              ))}
+                          </select>
+                      </div>
+                  )}
                   <div className="ml-auto flex items-center text-sm text-gray-500">
                       <Filter className="h-4 w-4 mr-2" />
                       Hiển thị {data.length} kết quả
@@ -1924,6 +2370,8 @@ const AdminDashboard: React.FC = () => {
                                             e.stopPropagation();
                                             if (activeTab === 'articles' || activeTab === 'history') {
                                                 openEditor(item, activeTab);
+                                            } else if (activeTab === 'questions') {
+                                                openQuestionEditor(item);
                                             } else {
                                                 setEditingItem(item); 
                                                 setIsModalOpen(true); 
@@ -1972,6 +2420,7 @@ const AdminDashboard: React.FC = () => {
             </div>
         </div>
         {renderModal()}
+        {renderQuestionEditor()}
     </div>
   );
 };

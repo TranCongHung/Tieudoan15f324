@@ -621,6 +621,97 @@ class ApiClient {
             throw new Error(e.message);
         }
     }
+
+    // --- SEED DATA ---
+    async seedAllData(): Promise<{ success: boolean; message: string }> {
+        try {
+            // Sample articles
+            const sampleArticles = [
+                {
+                    id: 'art_1',
+                    title: 'Lễ kỷ niệm 68 năm ngày thành lập Tiểu đoàn 15',
+                    summary: 'Sáng nay, tại đơn vị đã diễn ra lễ kỷ niệm 68 năm ngày thành lập Tiểu đoàn 15 trong không khí trang trọng và đầy tự hào.',
+                    content: 'Sáng nay, tại đơn vị đã diễn ra lễ kỷ niệm 68 năm ngày thành lập Tiểu đoàn 15 trong không khí trang trọng và đầy tự hào. Tham dự lễ kỷ niệm có các đồng chí trong Ban Chỉ huy, cùng toàn thể cán bộ, chiến sĩ trong đơn vị.',
+                    image_url: 'https://picsum.photos/800/400?random=1',
+                    date: new Date().toISOString().split('T')[0],
+                    author: 'Ban biên tập'
+                },
+                {
+                    id: 'art_2',
+                    title: 'Huấn luyện quy trình sẵn sàng chiến đấu',
+                    summary: 'Trong tuần qua, tiểu đoàn đã tổ chức huấn luyện quy trình sẵn sàng chiến đấu theo kế hoạch quý IV.',
+                    content: 'Trong tuần qua, tiểu đoàn đã tổ chức huấn luyện quy trình sẵn sàng chiến đấu theo kế hoạch quý IV. Các nội dung huấn luyện bao gồm: diễn tập tập kết, thực hành chiến thuật, và các quy trình bảo đảm kỹ thuật.',
+                    image_url: 'https://picsum.photos/800/400?random=2',
+                    date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+                    author: 'Phòng tác chiến'
+                }
+            ];
+
+            // Sample questions
+            const sampleQuestions = [
+                {
+                    id: 'q_1',
+                    question_text: 'Tiểu đoàn 15 được thành lập vào năm nào?',
+                    options: JSON.stringify(['1955', '1965', '1975', '1985']),
+                    correct_answer_index: 0,
+                    explanation: 'Tiểu đoàn 15 được thành lập vào năm 1955, là một trong những đơn vị lâu đời của Sư đoàn 324.'
+                },
+                {
+                    id: 'q_2',
+                    question_text: 'Sư đoàn 324 thuộc quân khu nào?',
+                    options: JSON.stringify(['Quân khu 1', 'Quân khu 2', 'Quân khu 3', 'Quân khu 4']),
+                    correct_answer_index: 3,
+                    explanation: 'Sư đoàn 324 thuộc Quân khu 4, đóng quân trên địa bàn tỉnh Quảng Trị.'
+                }
+            ];
+
+            // Sample milestones
+            const sampleMilestones = [
+                {
+                    id: 'mile_1',
+                    year: '1955',
+                    title: 'Thành lập đơn vị',
+                    subtitle: 'Khởi đầu lịch sử',
+                    content: 'Tiểu đoàn 15 chính thức được thành lập ngày 15/3/1955.',
+                    story: 'Trong bối cảnh đất nước cần xây dựng lực lượng vũ trang cách mạng, Tiểu đoàn 15 đã ra đời với những người lính đầu tiên đầy nhiệt huyết và tinh thần quyết chiến quyết thắng.',
+                    image: 'https://picsum.photos/600/400?random=3',
+                    icon: 'Flag',
+                    quiz: JSON.stringify([sampleQuestions[0]])
+                }
+            ];
+
+            // Sample users
+            const sampleUsers = [
+                {
+                    id: 'user_1',
+                    name: 'Nguyễn Văn A',
+                    email: 'admin@example.com',
+                    rank_name: 'Đại úy',
+                    position: 'Chỉ huy trưởng',
+                    unit: 'Tiểu đoàn 15',
+                    password: '123456',
+                    role: 'admin'
+                }
+            ];
+
+            // Insert data in parallel
+            const results = await Promise.allSettled([
+                supabase.from('articles').insert(sampleArticles),
+                supabase.from('questions').insert(sampleQuestions),
+                supabase.from('milestones').insert(sampleMilestones),
+                supabase.from('users').insert(sampleUsers)
+            ]);
+
+            const errors = results.filter(r => r.status === 'rejected');
+            if (errors.length > 0) {
+                throw new Error('Lỗi khi thêm dữ liệu mẫu');
+            }
+
+            return { success: true, message: 'Đã khởi tạo dữ liệu mẫu thành công!' };
+        } catch (e: any) {
+            return { success: false, message: e.message || 'Lỗi khi khởi tạo dữ liệu' };
+        }
+    }
 }
 
 export const apiService = new ApiClient();
