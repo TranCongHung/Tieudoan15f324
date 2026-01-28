@@ -6,11 +6,11 @@ AddType application/javascript .mjs
   Header set X-Content-Type-Options nosniff
 </IfModule>
 
-# Set index-build.html as default (build version)
-DirectoryIndex index-build.html index.html index.php
+# Set index-build-new.html as default (latest build)
+DirectoryIndex index-build-new.html index-build.html index.html index.php
 
 # Handle React Router
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index-build.html [L]
+RewriteRule ^(.*)$ index-build-new.html [L]

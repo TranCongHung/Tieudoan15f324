@@ -16,7 +16,22 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3000,
-      open: true
+      open: true,
+      headers: {
+        'Cross-Origin-Embedder-Policy': 'require-corp',
+        'Cross-Origin-Opener-Policy': 'same-origin'
+      }
+    },
+    build: {
+      target: 'es2015',
+      rollupOptions: {
+        output: {
+          manualChunks: undefined,
+          entryFileNames: 'assets/[name].js',
+          chunkFileNames: 'assets/[name].js',
+          assetFileNames: 'assets/[name].[ext]'
+        }
+      }
     }
   }
 })

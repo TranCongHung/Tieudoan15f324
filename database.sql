@@ -27,7 +27,15 @@ CREATE TABLE articles (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 3. Bảng History Milestones (Lịch sử)
+-- 3. Bảng Categories (Danh mục)
+CREATE TABLE categories (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4. Bảng History Milestones (Lịch sử)
 CREATE TABLE milestones (
     id VARCHAR(50) PRIMARY KEY,
     year VARCHAR(20),
@@ -42,7 +50,7 @@ CREATE TABLE milestones (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. Bảng Questions (Câu hỏi trắc nghiệm)
+-- 5. Bảng Questions (Câu hỏi trắc nghiệm)
 CREATE TABLE questions (
     id VARCHAR(50) PRIMARY KEY,
     question_text TEXT NOT NULL,
@@ -51,7 +59,7 @@ CREATE TABLE questions (
     explanation TEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. Bảng Quiz Results (Kết quả thi)
+-- 6. Bảng Quiz Results (Kết quả thi)
 CREATE TABLE quiz_results (
     id VARCHAR(50) PRIMARY KEY,
     user_id VARCHAR(50),
@@ -65,7 +73,7 @@ CREATE TABLE quiz_results (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 6. Bảng Scores (Điểm thi đua)
+-- 7. Bảng Scores (Điểm thi đua)
 CREATE TABLE scores (
     id VARCHAR(50) PRIMARY KEY,
     unit_name VARCHAR(100),
@@ -77,7 +85,7 @@ CREATE TABLE scores (
     date DATE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 7. Bảng Media (Thư viện)
+-- 8. Bảng Media (Thư viện)
 CREATE TABLE media (
     id VARCHAR(50) PRIMARY KEY,
     title VARCHAR(255),
@@ -88,7 +96,7 @@ CREATE TABLE media (
     date DATE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 8. Bảng Leaders (Ban chỉ huy)
+-- 9. Bảng Leaders (Ban chỉ huy)
 CREATE TABLE leaders (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100),
@@ -96,7 +104,7 @@ CREATE TABLE leaders (
     image LONGTEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 9. Bảng Comments (Bình luận)
+-- 10. Bảng Comments (Bình luận)
 CREATE TABLE comments (
     id VARCHAR(50) PRIMARY KEY,
     article_id VARCHAR(50),
@@ -109,7 +117,7 @@ CREATE TABLE comments (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 10. Bảng Documents (Tài liệu)
+-- 11. Bảng Documents (Tài liệu)
 CREATE TABLE documents (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -120,7 +128,7 @@ CREATE TABLE documents (
     size VARCHAR(50)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 11. Bảng Settings (Cấu hình hệ thống - Lưu key-value để linh hoạt)
+-- 12. Bảng Settings (Cấu hình hệ thống - Lưu key-value để linh hoạt)
 CREATE TABLE settings (
     setting_key VARCHAR(50) PRIMARY KEY,
     setting_value LONGTEXT
