@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { apiService } from '../services/api';
 import { Article } from '../types';
 import { Calendar, User, ArrowRight, Star, Loader2, Newspaper, AlertTriangle } from 'lucide-react';
@@ -11,6 +11,9 @@ const Home: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const { settings } = useSiteSettings();
+  
+  // Pagination
+  const [displayCount, setDisplayCount] = useState(6);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,6 +32,9 @@ const Home: React.FC = () => {
     fetchData();
   }, []);
 
+  // Memoize displayed articles to prevent unnecessary recalculations
+  const displayedArticles = useMemo(() => articles.slice(0, displayCount), [articles, displayCount]);
+
   return (
     <div className="pb-20 bg-[#f8fafc]">
       {/* Hero Section */}
@@ -38,6 +44,7 @@ const Home: React.FC = () => {
             className="w-full h-full object-cover"
             src={settings.heroImage || "https://images.unsplash.com/photo-1579935110378-8126281bd75d?auto=format&fit=crop&q=80"}
             alt="Hero Background"
+            loading="lazy"
           />
           <div 
              className="absolute inset-0 bg-black/60"
@@ -112,44 +119,58 @@ const Home: React.FC = () => {
                    </button>
                </div>
            ) : (
-               <div className="grid gap-6 sm:gap-8 lg:gap-10 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                 {articles.length > 0 ? articles.map((article) => (
-                   <article key={article.id} className="group bg-white flex flex-col h-full rounded-xl sm:rounded-2xl overflow-hidden border border-gray-50 hover:shadow-2xl transition-all duration-500">
-                     <Link to={`/article/${article.id}`} className="block h-48 sm:h-56 overflow-hidden relative">
-                       <img className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" src={article.imageUrl || "https://picsum.photos/400/300"} alt={article.title} />
-                       <div className="absolute top-3 sm:top-4 left-3 sm:left-4">
-                           <span className="bg-green-700 text-white text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 rounded-full uppercase tracking-tighter">Tin mới</span>
-                       </div>
-                     </Link>
-                     <div className="p-4 sm:p-6 flex-1 flex flex-col">
-                       <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-bold text-gray-400 mb-3 sm:mb-4 uppercase tracking-widest">
-                          <span className="flex items-center"><Calendar className="h-3 w-3 mr-1"/> {article.date}</span>
-                          <span className="flex items-center"><User className="h-3 w-3 mr-1"/> {article.author}</span>
-                       </div>
-                       <Link to={`/article/${article.id}`} className="block group-hover:text-green-700 transition-colors mb-3 sm:mb-4">
-                          <h3 className="text-lg sm:text-xl font-display font-bold text-gray-900 leading-tight line-clamp-2">
-                              {article.title}
-                          </h3>
+               <>
+                 <div className="grid gap-6 sm:gap-8 lg:gap-10 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                   {displayedArticles.length > 0 ? displayedArticles.map((article) => (
+                     <article key={article.id} className="group bg-white flex flex-col h-full rounded-xl sm:rounded-2xl overflow-hidden border border-gray-50 hover:shadow-2xl transition-all duration-500">
+                       <Link to={`/article/${article.id}`} className="block h-48 sm:h-56 overflow-hidden relative">
+                         <img className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" src={article.imageUrl || "https://picsum.photos/400/300"} alt={article.title} loading="lazy" />
+                         <div className="absolute top-3 sm:top-4 left-3 sm:left-4">
+                             <span className="bg-green-700 text-white text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 rounded-full uppercase tracking-tighter">Tin mới</span>
+                         </div>
                        </Link>
-                       <p className="text-gray-600 text-sm line-clamp-3 mb-4 sm:mb-6 font-serif leading-relaxed">
-                           {article.summary}
-                       </p>
-                       <div className="mt-auto pt-3 sm:pt-4 border-t border-gray-50">
-                           <Link 
-                                to={`/article/${article.id}`} 
-                                className="inline-flex items-center text-xs font-black uppercase tracking-wider text-green-800 hover:text-yellow-600 transition-colors"
-                           >
-                               Đọc chi tiết bài viết <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1.5 sm:ml-2" />
-                           </Link>
+                       <div className="p-4 sm:p-6 flex-1 flex flex-col">
+                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-bold text-gray-400 mb-3 sm:mb-4 uppercase tracking-widest">
+                            <span className="flex items-center"><Calendar className="h-3 w-3 mr-1"/> {article.date}</span>
+                            <span className="flex items-center"><User className="h-3 w-3 mr-1"/> {article.author}</span>
+                         </div>
+                         <Link to={`/article/${article.id}`} className="block group-hover:text-green-700 transition-colors mb-3 sm:mb-4">
+                            <h3 className="text-lg sm:text-xl font-display font-bold text-gray-900 leading-tight line-clamp-2">
+                                {article.title}
+                            </h3>
+                         </Link>
+                         <p className="text-gray-600 text-sm line-clamp-3 mb-4 sm:mb-6 font-serif leading-relaxed">
+                             {article.summary}
+                         </p>
+                         <div className="mt-auto pt-3 sm:pt-4 border-t border-gray-50">
+                             <Link 
+                                  to={`/article/${article.id}`} 
+                                  className="inline-flex items-center text-xs font-black uppercase tracking-wider text-green-800 hover:text-yellow-600 transition-colors"
+                             >
+                                 Đọc chi tiết bài viết <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1.5 sm:ml-2" />
+                             </Link>
+                         </div>
                        </div>
-                     </div>
-                   </article>
-                 )) : (
-                     <div className="col-span-full py-12 sm:py-16 lg:py-20 text-center bg-gray-50 rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-200">
-                         <p className="text-gray-400 font-serif italic text-base sm:text-lg">Chưa có bài báo nào được cập nhật trên hệ thống.</p>
-                     </div>
+                     </article>
+                   )) : (
+                       <div className="col-span-full py-12 sm:py-16 lg:py-20 text-center bg-gray-50 rounded-xl sm:rounded-2xl border-2 border-dashed border-gray-200">
+                           <p className="text-gray-400 font-serif italic text-base sm:text-lg">Chưa có bài báo nào được cập nhật trên hệ thống.</p>
+                       </div>
+                   )}
+                 </div>
+
+                 {/* Load more button */}
+                 {displayCount < articles.length && (
+                   <div className="text-center mt-12">
+                     <button
+                       onClick={() => setDisplayCount(prev => prev + 6)}
+                       className="px-8 py-3 bg-green-700 text-white font-bold rounded-lg hover:bg-green-800 transition-all transform hover:scale-105 uppercase text-sm tracking-wider"
+                     >
+                       Tải thêm bài viết
+                     </button>
+                   </div>
                  )}
-               </div>
+               </>
            )}
         </div>
       </div>

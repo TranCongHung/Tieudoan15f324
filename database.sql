@@ -1,6 +1,6 @@
--- Tạo cơ sở dữ liệu
-CREATE DATABASE IF NOT EXISTS tieudoan15db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE tieudoan15db;
+-- Tạo cơ sở dữ liệu (COMMENT OUT cho InfinityFree - không cho CREATE DATABASE)
+-- CREATE DATABASE IF NOT EXISTS tieudoan15db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- USE tieudoan15db;
 
 -- 1. Bảng Users (Cán bộ, chiến sĩ)
 CREATE TABLE users (
@@ -13,7 +13,7 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     role ENUM('admin', 'user') DEFAULT 'user',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 2. Bảng Articles (Bài viết)
 CREATE TABLE articles (
@@ -25,7 +25,7 @@ CREATE TABLE articles (
     date DATE,
     author VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. Bảng History Milestones (Lịch sử)
 CREATE TABLE milestones (
@@ -38,8 +38,9 @@ CREATE TABLE milestones (
     icon VARCHAR(50),
     story LONGTEXT,
     quiz JSON,
+    narration_audio LONGTEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 4. Bảng Questions (Câu hỏi trắc nghiệm)
 CREATE TABLE questions (
@@ -48,7 +49,7 @@ CREATE TABLE questions (
     options JSON, 
     correct_answer_index INT,
     explanation TEXT
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. Bảng Quiz Results (Kết quả thi)
 CREATE TABLE quiz_results (
@@ -62,7 +63,7 @@ CREATE TABLE quiz_results (
     total_questions INT,
     timestamp DATETIME,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. Bảng Scores (Điểm thi đua)
 CREATE TABLE scores (
@@ -74,7 +75,7 @@ CREATE TABLE scores (
     discipline_score FLOAT,
     total_score FLOAT,
     date DATE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 7. Bảng Media (Thư viện)
 CREATE TABLE media (
@@ -85,7 +86,7 @@ CREATE TABLE media (
     thumbnail LONGTEXT,
     description TEXT,
     date DATE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 8. Bảng Leaders (Ban chỉ huy)
 CREATE TABLE leaders (
@@ -93,7 +94,7 @@ CREATE TABLE leaders (
     name VARCHAR(100),
     role VARCHAR(100),
     image LONGTEXT
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 9. Bảng Comments (Bình luận)
 CREATE TABLE comments (
@@ -106,7 +107,7 @@ CREATE TABLE comments (
     date DATE,
     FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 10. Bảng Documents (Tài liệu)
 CREATE TABLE documents (
@@ -117,13 +118,13 @@ CREATE TABLE documents (
     type VARCHAR(50),
     date DATE,
     size VARCHAR(50)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 11. Bảng Settings (Cấu hình hệ thống - Lưu key-value để linh hoạt)
 CREATE TABLE settings (
     setting_key VARCHAR(50) PRIMARY KEY,
     setting_value LONGTEXT
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dữ liệu mẫu Admin mặc định
 INSERT INTO users (id, name, email, rank_name, position, unit, password, role) 

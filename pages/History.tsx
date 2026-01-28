@@ -1,17 +1,47 @@
-
-import React, { useState, useEffect } from 'react';
-import { BookOpen, X, ChevronLeft, ChevronRight, Award, Loader2, Calendar, CheckCircle, AlertCircle, HelpCircle, XCircle, RotateCcw, Flag, Star, BookMarked, MousePointerClick, Bookmark, RotateCw, Zap, Target, TrendingUp, Trophy } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
+import { BookOpen, X, ChevronLeft, ChevronRight, Award, Loader2, Calendar, CheckCircle, AlertCircle, HelpCircle, XCircle, RotateCcw, Flag, Star, BookMarked, MousePointerClick, Bookmark, RotateCw, Zap, Target, TrendingUp, Trophy, Eye, Users, Copy, Check, Highlighter, Music, Volume2, VolumeX, Filter, SortAsc, SortDesc, Search, Clock, Heart, Share2, Download, Settings, ChevronDown, Grid, List, SlidersHorizontal } from 'lucide-react';
 import { useAuth, useNavigate } from '../context/AuthContext';
 import { apiService } from '../services/api';
-import { Milestone, Question, QuizResult } from '../types';
+import { Milestone, Question, QuizResult, ReadHistory } from '../types';
 import { useSiteSettings } from '../context/SiteContext';
+import { useCachedAsync } from '../hooks/useCache';
+import MilestoneCard from '../components/MilestoneCard';
+import EnhancedBook from '../components/EnhancedBook';
 
 const History: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { settings } = useSiteSettings();
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [filteredMilestones, setFilteredMilestones] = useState<Milestone[]>([]);
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
+  
+  // Enhanced UI State
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'year' | 'title' | 'recent'>('year');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterYear, setFilterYear] = useState<string>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  
+  // URL Parameters
+  const [urlMilestoneId, setUrlMilestoneId] = useState<string | null>(null);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [hasReadMilestone, setHasReadMilestone] = useState(false);
+  const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
+  const [readHistory, setReadHistory] = useState<ReadHistory[]>([]);
+  const [showReadersPage, setShowReadersPage] = useState(false);
+  const [currentReaderPage, setCurrentReaderPage] = useState(0);
+  const [isFlippingReaders, setIsFlippingReaders] = useState(false);
   
   // Book State
   const [currentSpread, setCurrentSpread] = useState(0);
@@ -27,56 +57,30 @@ const History: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [isPortraitMobile, setIsPortraitMobile] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    const checkOrientation = () => {
-        // Kiểm tra xem có phải mobile không (dựa vào width) và đang xoay dọc không
-        const isMobile = window.innerWidth <= 768;
-        const isPortrait = window.innerHeight > window.innerWidth;
-        setIsPortraitMobile(isMobile && isPortrait);
-    };
-
-    checkOrientation();
-    window.addEventListener('resize', checkOrientation);
-    return () => window.removeEventListener('resize', checkOrientation);
-  }, []);
-
-  useEffect(() => {
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const data = await apiService.getHistory();
-            console.log('Milestones loaded:', data);
-            data.forEach((m, idx) => {
-                console.log(`Milestone ${idx}:`, m.title, '- Quiz count:', m.quiz?.length || 0);
-            });
-            setMilestones(data);
-        } catch (error) {
-            console.error("Lỗi lấy lịch sử từ Supabase:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-    fetchData();
-  }, []);
-
-  // Reset quiz state when opening a new book
-  useEffect(() => {
-    if (selectedMilestone) {
-        setQuizAnswers({});
-        setQuizSubmitted(false);
-        setQuizScore(0);
-        setCurrentSpread(0);
-        setResultSaved(false);
-        setIsSavingResult(false);
-    }
-  }, [selectedMilestone]);
-
-  const getPages = (html: string) => {
+  const getPages = useCallback((html: string) => {
     if (!html) return [];
+
+    const toSafeHtmlParagraphs = (text: string) => {
+      const escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      return escaped
+        .split(/\n{2,}/)
+        .map(p => p.trim())
+        .filter(Boolean)
+        .map(p => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
+        .join('');
+    };
+
+    const normalizedHtml = /<\s*[a-z][\s\S]*>/i.test(html) ? html : toSafeHtmlParagraphs(html);
     
     // Đầu tiên tách theo hr tags
-    const sections = html.split(/<hr\s*\/?>/i).filter(p => p.trim() !== '');
+    const sections = normalizedHtml.split(/<hr\s*\/?>/i).filter(p => p.trim() !== '');
     const pages: string[] = [];
     const MAX_CHARS_PER_PAGE = 1200; // Giới hạn ký tự mỗi trang
     
@@ -121,25 +125,451 @@ const History: React.FC = () => {
     });
     
     return pages;
+  }, []);
+
+  // Computed values
+  const textPages = useMemo(() => {
+    const source = selectedMilestone?.story || selectedMilestone?.content;
+    if (!source) return [];
+    return getPages(source);
+  }, [selectedMilestone, getPages]);
+
+  const hasQuiz = useMemo(() => {
+    return selectedMilestone?.quiz && selectedMilestone.quiz.length > 0;
+  }, [selectedMilestone]);
+
+  const totalSpreads = useMemo(() => {
+    const pages = textPages.length;
+    // Cover + content pages + optional quiz page
+    return hasQuiz ? Math.ceil(pages / 2) + 2 : Math.ceil(pages / 2) + 1;
+  }, [textPages, hasQuiz]);
+
+  useEffect(() => {
+    const checkOrientation = () => {
+        // Kiểm tra xem có phải mobile không (dựa vào width) và đang xoay dọc không
+        const isMobile = window.innerWidth <= 768;
+        const isPortrait = window.innerHeight > window.innerWidth;
+        setIsPortraitMobile(isMobile && isPortrait);
+    };
+
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    return () => window.removeEventListener('resize', checkOrientation);
+  }, []);
+
+  // Check URL parameter to auto-open milestone
+  useEffect(() => {
+    const pathname = window.location.pathname;
+    console.log('📍 Current pathname:', pathname);
+    
+    // Check if it's a sub-route like /history/123456
+    if (pathname.startsWith('/history/')) {
+        const milestoneId = pathname.replace('/history/', '');
+        console.log('🔍 Extracted milestone ID from URL:', milestoneId);
+        setUrlMilestoneId(milestoneId);
+    } else {
+        // Fallback to query parameter
+        const params = new URLSearchParams(window.location.search);
+        const queryMilestoneId = params.get('milestone');
+        console.log('🔍 URL Params check:', { queryMilestoneId, urlParam: params.toString() });
+        if (queryMilestoneId) {
+            setUrlMilestoneId(queryMilestoneId);
+            console.log('📌 Set URL Milestone ID from query:', queryMilestoneId);
+        }
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const data = await apiService.getHistory();
+            console.log('📚 Milestones loaded:', data.length, 'items');
+            console.log('📋 Milestone IDs:', data.map(m => ({ id: m.id, title: m.title })));
+            data.forEach((m, idx) => {
+                console.log(`Milestone ${idx}:`, m.title, '- ID:', m.id, '- Quiz count:', m.quiz?.length || 0);
+            });
+            setMilestones(data);
+            
+            // Auto-open milestone if URL parameter exists
+            if (urlMilestoneId) {
+                console.log('🔍 Looking for milestone ID:', urlMilestoneId);
+                const milestone = data.find(m => m.id === urlMilestoneId);
+                if (milestone) {
+                    console.log('✅ Found milestone:', milestone.title);
+                    setSelectedMilestone(milestone);
+                    setCurrentSpread(1); // Jump directly to first page
+                    console.log('✅ Auto-opened milestone from URL:', milestone.title);
+                } else {
+                    console.log('❌ Milestone not found for ID:', urlMilestoneId);
+                    console.log('Available IDs:', data.map(m => m.id));
+                }
+            }
+        } catch (error) {
+            console.error("Lỗi lấy lịch sử từ Supabase:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+    fetchData();
+  }, [urlMilestoneId]);
+
+  // Reset quiz state when opening a new book
+  useEffect(() => {
+    if (selectedMilestone) {
+        setQuizAnswers({});
+        setQuizSubmitted(false);
+        setQuizScore(0);
+        // Nếu có URL parameter, không reset currentSpread
+        if (!urlMilestoneId) {
+            setCurrentSpread(0);
+        }
+        setResultSaved(false);
+        setIsSavingResult(false);
+        setHasReadMilestone(false);
+        setReadHistory([]);
+        
+        // Check if user has already read this milestone
+        if (user) {
+            checkReadStatus();
+            loadReadHistory();
+        }
+    }
+  }, [selectedMilestone, urlMilestoneId]);
+
+  // Auto-mark as read when user goes to first page
+  useEffect(() => {
+    if (currentSpread > 0 && !hasReadMilestone && user && selectedMilestone) {
+        handleMarkAsReadAuto();
+    }
+  }, [currentSpread]);
+
+  const checkReadStatus = async () => {
+    if (!user || !selectedMilestone) return;
+    try {
+        const hasRead = await apiService.checkUserHasReadMilestone(user.id, selectedMilestone.id);
+        setHasReadMilestone(hasRead);
+    } catch (error) {
+        console.error("Lỗi kiểm tra trạng thái đã đọc:", error);
+    }
   };
 
-  const handlePageChange = (direction: 'next' | 'prev') => {
-      setIsFlipping(true);
-      setTimeout(() => {
-          setCurrentSpread(prev => direction === 'next' ? prev + 1 : prev - 1);
-          setIsFlipping(false);
+  const loadReadHistory = async () => {
+    if (!selectedMilestone) return;
+    try {
+        const history = await apiService.getReadHistoryByMilestone(selectedMilestone.id);
+        setReadHistory(history);
+    } catch (error) {
+        console.error("Lỗi tải lịch sử đọc:", error);
+    }
+  };
+
+  const handleMarkAsReadAuto = async () => {
+    if (!user || !selectedMilestone || hasReadMilestone) return;
+    
+    try {
+        setIsMarkingAsRead(true);
+        await apiService.markMilestoneAsRead(
+            user.id,
+            user.name,
+            user.rank,
+            user.unit || 'Chưa cập nhật',
+            selectedMilestone.id,
+            selectedMilestone.title
+        );
+        setHasReadMilestone(true);
+        await loadReadHistory();
+        console.log('✅ Tự động ghi nhận: người dùng', user.name, 'đã đọc', selectedMilestone.title);
+    } catch (error) {
+        console.error('❌ Lỗi ghi nhận tự động:', error);
+    } finally {
+        setIsMarkingAsRead(false);
+    }
+  };
+
+  const handlePageChange = useCallback((direction: 'prev' | 'next') => {
+    if (direction === 'prev' && currentSpread > 0) {
+      setCurrentSpread(prev => prev - 1);
+    } else if (direction === 'next') {
+      setCurrentSpread(prev => prev + 1);
+    }
+  }, [currentSpread]);
+
+  const handleMilestoneSelect = useCallback((milestone: Milestone) => {
+    setSelectedMilestone(milestone);
+    setCurrentSpread(0);
+  }, []);
+
+  const handleQuizStart = useCallback(() => {
+    if (selectedMilestone && hasQuiz && totalSpreads) {
+      setCurrentSpread(totalSpreads - 1);
+    }
+  }, [selectedMilestone, hasQuiz, totalSpreads]);
+
+  const processedMilestones = useMemo(() => {
+    let filtered = [...milestones];
+    
+    // Apply search filter
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.toLowerCase();
+      filtered = filtered.filter(m => 
+        m.title.toLowerCase().includes(query) ||
+        m.subtitle.toLowerCase().includes(query) ||
+        m.content.toLowerCase().includes(query) ||
+        m.year.includes(query)
+      );
+    }
+    
+    // Apply year filter
+    if (filterYear !== 'all') {
+      filtered = filtered.filter(m => m.year === filterYear);
+    }
+    
+    // Apply category filter
+    if (filterCategory !== 'all') {
+      filtered = filtered.filter(m => 
+        m.title.toLowerCase().includes(filterCategory.toLowerCase())
+      );
+    }
+    
+    // Apply date range filter
+    if (dateRange.start) {
+      filtered = filtered.filter(m => parseInt(m.year) >= parseInt(dateRange.start));
+    }
+    if (dateRange.end) {
+      filtered = filtered.filter(m => parseInt(m.year) <= parseInt(dateRange.end));
+    }
+    
+    // Apply tags filter
+    if (selectedTags.length > 0) {
+      filtered = filtered.filter(m => 
+        selectedTags.some(tag => 
+          m.title.toLowerCase().includes(tag.toLowerCase()) ||
+          m.subtitle.toLowerCase().includes(tag.toLowerCase())
+        )
+      );
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'year':
+          comparison = parseInt(a.year) - parseInt(b.year);
+          break;
+        case 'title':
+          comparison = a.title.localeCompare(b.title, 'vi');
+          break;
+        case 'recent':
+          // Sort by recency (newer first)
+          comparison = parseInt(b.year) - parseInt(a.year);
+          break;
+      }
+      
+      return sortOrder === 'desc' ? -comparison : comparison;
+    });
+    
+    return filtered;
+  }, [milestones, searchQuery, filterYear, filterCategory, sortBy, sortOrder]);
+
+  // Update filtered milestones when processed data changes
+  useEffect(() => {
+    setFilteredMilestones(processedMilestones);
+  }, [processedMilestones]);
+  
+  // Get unique years for filter dropdown
+  const availableYears = useMemo(() => {
+    const years = [...new Set(milestones.map(m => m.year))].sort();
+    return years;
+  }, [milestones]);
+  
+  // Performance: Debounced search
+  const debouncedSearch = useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
+    return (query: string) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        setSearchQuery(query);
       }, 300);
-  };
+    };
+  }, []);
+  
+  // Toggle favorite
+  const toggleFavorite = useCallback((milestoneId: string) => {
+    setFavorites(prev => {
+      if (prev.includes(milestoneId)) {
+        return prev.filter(id => id !== milestoneId);
+      } else {
+        return [...prev, milestoneId];
+      }
+    });
+    // Save to localStorage
+    const updated = favorites.includes(milestoneId) 
+      ? favorites.filter(id => id !== milestoneId)
+      : [...favorites, milestoneId];
+    localStorage.setItem('favoriteMilestones', JSON.stringify(updated));
+  }, [favorites]);
+  
+  // Load favorites from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('favoriteMilestones');
+    if (saved) {
+      try {
+        setFavorites(JSON.parse(saved));
+      } catch (e) {
+        console.error('Error loading favorites:', e);
+      }
+    }
+  }, []);
 
-  const textPages = selectedMilestone ? getPages(selectedMilestone.story) : [];
-  const storySpreadsCount = Math.ceil(textPages.length / 2);
-  const hasQuiz = selectedMilestone?.quiz && selectedMilestone.quiz.length > 0;
-  const totalSpreads = 1 + storySpreadsCount + (hasQuiz ? 1 : 0);
+  // Enhanced UI Components
+  const FilterControls = () => (
+    <div className="bg-white rounded-xl shadow-lg p-6 mb-8 border border-stone-200 animate-fade-in">
+      <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+        {/* Search Bar */}
+        <div className="relative flex-1 w-full lg:w-auto">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400 w-5 h-5" />
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tên, nội dung, năm..."
+            className="w-full pl-10 pr-4 py-3 border border-stone-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+            onChange={(e) => debouncedSearch(e.target.value)}
+          />
+        </div>
+        
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-2 bg-stone-100 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-md transition-all duration-200 ${
+              viewMode === 'grid' 
+                ? 'bg-white text-green-700 shadow-sm' 
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+            title="Chế độ lưới"
+          >
+            <Grid className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-md transition-all duration-200 ${
+              viewMode === 'list' 
+                ? 'bg-white text-green-700 shadow-sm' 
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+            title="Chế độ danh sách"
+          >
+            <List className="w-5 h-5" />
+          </button>
+        </div>
+        
+        {/* Advanced Filters Toggle */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 rounded-lg transition-all duration-200 text-stone-700"
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          <span className="hidden sm:inline">Bộ lọc</span>
+          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+            showFilters ? 'rotate-180' : ''
+          }`} />
+        </button>
+      </div>
+      
+      {/* Advanced Filters */}
+      {showFilters && (
+        <div className="mt-6 pt-6 border-t border-stone-200 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
+          {/* Year Filter */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-2">Năm</label>
+            <select
+              value={filterYear}
+              onChange={(e) => setFilterYear(e.target.value)}
+              className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+              <option value="all">Tất cả các năm</option>
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Sort By */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-2">Sắp xếp theo</label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+              <option value="year">Năm</option>
+              <option value="title">Tên</option>
+              <option value="recent">Gần đây</option>
+            </select>
+          </div>
+          
+          {/* Sort Order */}
+          <div>
+            <label className="block text-sm font-medium text-stone-700 mb-2">Thứ tự</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSortOrder('asc')}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 ${
+                  sortOrder === 'asc'
+                    ? 'bg-green-100 border-green-300 text-green-700'
+                    : 'bg-white border-stone-300 text-stone-600 hover:bg-stone-50'
+                }`}
+              >
+                <SortAsc className="w-4 h-4" />
+                Tăng dần
+              </button>
+              <button
+                onClick={() => setSortOrder('desc')}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 ${
+                  sortOrder === 'desc'
+                    ? 'bg-green-100 border-green-300 text-green-700'
+                    : 'bg-white border-stone-300 text-stone-600 hover:bg-stone-50'
+                }`}
+              >
+                <SortDesc className="w-4 h-4" />
+                Giảm dần
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Results Summary */}
+      <div className="mt-4 pt-4 border-t border-stone-200 flex items-center justify-between">
+        <p className="text-sm text-stone-600">
+          Hiển thị <span className="font-semibold text-green-700">{filteredMilestones.length}</span> trên{' '}
+          <span className="font-semibold">{milestones.length}</span> mốc lịch sử
+        </p>
+        
+        {/* Reset Filters */}
+        {(searchQuery || filterYear !== 'all' || filterCategory !== 'all') && (
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setFilterYear('all');
+              setFilterCategory('all');
+              setSortBy('year');
+              setSortOrder('asc');
+            }}
+            className="text-sm text-stone-500 hover:text-stone-700 transition-colors duration-200"
+          >
+            Đặt lại bộ lọc
+          </button>
+        )}
+      </div>
+    </div>
+  );
 
-  const handleSelectAnswer = (questionId: string, optionIndex: number) => {
+  const handleSelectAnswer = useCallback((questionId: string, optionIndex: number) => {
       if (quizSubmitted) return;
       setQuizAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
-  };
+  }, []);
 
   const handleSubmitQuiz = async () => {
       console.log('handleSubmitQuiz called');
@@ -222,6 +652,31 @@ const History: React.FC = () => {
       }, 300);
   };
 
+  const handleReaderPageChange = useCallback((direction: 'next' | 'prev') => {
+      setIsFlippingReaders(true);
+      setTimeout(() => {
+          const maxPage = Math.ceil(readHistory.length / 10) - 1;
+          setCurrentReaderPage(prev => {
+              if (direction === 'next') return prev < maxPage ? prev + 1 : prev;
+              return prev > 0 ? prev - 1 : prev;
+          });
+          setIsFlippingReaders(false);
+      }, 300);
+  }, [readHistory.length]);
+
+  const QuoteIcon = ({ className }: { className?: string }) => (
+    <svg
+      className={className}
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H22.017V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM5.01697 21L5.01697 18C5.01697 16.8954 5.9124 16 7.01697 16H10.017C10.5693 16 11.017 15.5523 11.017 15V9C11.017 8.44772 10.5693 8 10.017 8H6.01697C5.46468 8 5.01697 8.44772 5.01697 9V11C5.01697 11.5523 4.56925 12 4.01697 12H3.01697V5H13.017V15C13.017 18.3137 10.3307 21 7.01697 21H5.01697Z" />
+    </svg>
+  );
+
   const renderCover = () => (
       <>
         <div className="w-full md:w-1/2 h-full p-8 md:p-12 border-b md:border-b-0 md:border-r border-stone-300 flex flex-col justify-center items-center bg-[#fdfbf7] relative overflow-hidden shadow-[inset_-10px_0_20px_rgba(0,0,0,0.02)] bg-[url('https://www.transparenttextures.com/patterns/paper.png')]">
@@ -239,14 +694,23 @@ const History: React.FC = () => {
                  <div className="w-24 h-1.5 bg-yellow-600 mx-auto mb-6 rounded-full"></div>
                  <p className="text-xl text-stone-600 font-serif italic mb-8 px-8">{selectedMilestone?.subtitle}</p>
 
-                 {hasQuiz && (
-                     <button 
-                        onClick={jumpToQuiz}
-                        className="inline-flex items-center px-8 py-3 bg-red-800 text-white text-xs font-bold uppercase tracking-widest rounded-full shadow-lg hover:bg-red-700 hover:scale-105 transition-all animate-bounce border-2 border-red-500 ring-4 ring-red-100"
+                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-4">
+                   <button
+                     onClick={() => handlePageChange('next')}
+                     className="inline-flex items-center justify-center px-8 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white text-xs font-bold uppercase tracking-widest rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all border-2 border-green-400"
+                   >
+                     <BookOpen className="w-5 h-5 mr-2" /> Đọc nội dung
+                   </button>
+
+                   {hasQuiz && (
+                     <button
+                       onClick={jumpToQuiz}
+                       className="inline-flex items-center justify-center px-8 py-3 bg-red-700 text-white text-xs font-bold uppercase tracking-widest rounded-full shadow-lg hover:bg-red-600 hover:scale-105 transition-all border-2 border-red-500"
                      >
-                         <MousePointerClick className="w-5 h-5 mr-2" /> Vào thi ngay
+                       <HelpCircle className="w-5 h-5 mr-2" /> Vào thi
                      </button>
-                 )}
+                   )}
+                 </div>
              </div>
         </div>
 
@@ -255,15 +719,9 @@ const History: React.FC = () => {
                 <h3 className="text-center font-bold text-stone-400 uppercase tracking-widest text-sm mb-8 border-b border-stone-200 pb-2 w-1/3 mx-auto">Giới thiệu</h3>
                 <div className="relative">
                     <QuoteIcon className="absolute -top-6 -left-6 w-10 h-10 text-stone-200/80" />
-                    <p className="first-letter:text-6xl first-letter:font-black first-letter:float-left first-letter:mr-4 first-letter:text-green-900 text-stone-700">
-                        {selectedMilestone?.content}
+                    <p className="first-letter:text-6xl first-letter:font-black first-letter:float-left first-letter:mr-4 first-letter:text-green-900 text-stone-700 whitespace-pre-line">
+                        {selectedMilestone?.story || selectedMilestone?.content}
                     </p>
-                </div>
-                <div className="mt-12 text-center text-green-900 font-bold flex flex-col items-center">
-                    <div className="w-16 h-16 rounded-full border-4 border-yellow-500/30 flex items-center justify-center mb-3 bg-white shadow-sm">
-                        <Award className="w-8 h-8 text-yellow-600" />
-                    </div>
-                    <span className="font-display text-xl tracking-wide">Mốc son năm {selectedMilestone?.year}</span>
                 </div>
             </div>
             <div className="absolute bottom-6 right-8 text-[10px] text-stone-400 font-bold uppercase tracking-widest">Trang Bìa</div>
@@ -314,7 +772,8 @@ const History: React.FC = () => {
       );
   };
 
-  const renderQuizPage = () => (
+  const renderQuizPage = () => {
+      return (
       <>
         <div className="w-full md:w-1/2 h-full p-8 md:p-12 border-r border-stone-300 flex flex-col bg-[#fdfbf7] overflow-y-auto custom-scrollbar relative shadow-[inset_-15px_0_25px_rgba(0,0,0,0.03)] bg-[url('https://www.transparenttextures.com/patterns/graphy.png')]">
              <div className="sticky top-0 bg-[#fdfbf7]/95 backdrop-blur-sm z-10 pb-4 border-b-2 border-green-800 mb-6 flex justify-between items-center">
@@ -331,7 +790,7 @@ const History: React.FC = () => {
                  </div>
                  <div className="text-right">
                      <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">Tiến độ</span>
-                     <div className="text-lg font-black text-green-800 leading-none">
+                     <div className="text-lg font-black text-green-900 leading-none">
                          {Object.keys(quizAnswers).length}/{selectedMilestone?.quiz?.length}
                      </div>
                  </div>
@@ -486,7 +945,7 @@ const History: React.FC = () => {
 
                       {/* Result Message */}
                       {quizScore === selectedMilestone?.quiz?.length ? (
-                          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 text-yellow-900 p-6 rounded-xl font-bold mb-8 border-2 border-yellow-300 shadow-lg relative overflow-hidden animate-pulse">
+                          <div className="bg-green-50 text-green-800 p-6 rounded-xl font-bold mb-8 border-2 border-green-200 shadow-lg relative overflow-hidden animate-pulse">
                               <div className="absolute top-0 right-0 -mt-2 -mr-2 w-12 h-12 bg-yellow-200 rounded-full opacity-50"></div>
                               <div className="absolute -bottom-1 -right-1 w-16 h-16 bg-yellow-200 rounded-full opacity-20"></div>
                               <p className="text-xl mb-2 relative z-10 flex items-center"><Zap className="w-5 h-5 mr-2" /> Xuất sắc! Đồng chí rất giỏi! 🎉</p>
@@ -547,12 +1006,153 @@ const History: React.FC = () => {
         </div>
       </>
   );
+};
 
-  const QuoteIcon = ({className}: {className?: string}) => (
-      <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-          <path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H22.017V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM5.01697 21L5.01697 18C5.01697 16.8954 5.9124 16 7.01697 16H10.017C10.5693 16 11.017 15.5523 11.017 15V9C11.017 8.44772 10.5693 8 10.017 8H6.01697C5.46468 8 5.01697 8.44772 5.01697 9V11C5.01697 11.5523 4.56925 12 4.01697 12H3.01697V5H13.017V15C13.017 18.3137 10.3307 21 7.01697 21H5.01697Z" />
-      </svg>
-  );
+  const renderReadersPage = () => {
+      const itemsPerPage = 10;
+      const startIndex = currentReaderPage * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const pageReaders = readHistory.slice(startIndex, endIndex);
+      const totalPages = Math.ceil(readHistory.length / itemsPerPage);
+      
+      return (
+          <>
+            <div className="w-full md:w-1/2 h-full p-8 md:p-12 border-r border-stone-200 flex flex-col bg-[#fdfbf7] overflow-y-auto custom-scrollbar shadow-[inset_-15px_0_25px_rgba(0,0,0,0.03)] bg-[url('https://www.transparenttextures.com/patterns/paper.png')]">
+                <div className="flex items-center justify-between mb-6">
+                  <button
+                    onClick={() => setShowReadersPage(false)}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-sm font-bold transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Quay lại
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleReaderPageChange('prev')}
+                      disabled={currentReaderPage === 0}
+                      className="w-9 h-9 rounded-full bg-stone-800 text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Trang trước"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleReaderPageChange('next')}
+                      disabled={currentReaderPage >= totalPages - 1}
+                      className="w-9 h-9 rounded-full bg-stone-800 text-white flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Trang sau"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex-grow">
+                    <div className="mb-8 pb-4 border-b-2 border-blue-800">
+                        <h2 className="text-2xl font-bold font-display text-blue-900 mb-2 flex items-center gap-2">
+                            <Eye className="w-6 h-6" /> Danh sách người đã đọc
+                        </h2>
+                        <p className="text-sm text-stone-600 font-serif">{selectedMilestone?.title}</p>
+                    </div>
+                    
+                    <div className="space-y-4 pb-10">
+                        {pageReaders.map((reader, idx) => (
+                            <div key={reader.id} className="flex items-center justify-between p-4 bg-white rounded-lg border-l-4 border-blue-500 hover:shadow-md transition-shadow">
+                                <div className="flex items-center gap-4 flex-grow">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg">
+                                        {startIndex + idx + 1}
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-stone-800">{reader.userName}</p>
+                                        <p className="text-xs text-stone-600">
+                                            <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded mr-2">{reader.userRank}</span>
+                                            <span className="text-stone-500">{reader.unit}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs text-stone-500 font-mono">
+                                        {new Date(reader.readAt).toLocaleDateString('vi-VN')}
+                                    </p>
+                                    <p className="text-xs text-stone-400">
+                                        {new Date(reader.readAt).toLocaleTimeString('vi-VN')}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-auto pt-4 border-t border-stone-200 text-center">
+                        <p className="text-sm text-stone-500 font-bold">
+                            Trang {currentReaderPage + 1} / {totalPages} • Tổng: {readHistory.length} người
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="hidden md:flex w-full md:w-1/2 h-full p-8 md:p-12 flex-col items-center justify-center bg-[#faf8f4] text-center relative shadow-[inset_15px_0_25px_rgba(0,0,0,0.03)] bg-[url('https://www.transparenttextures.com/patterns/paper.png')]">
+                <div className="absolute inset-6 border-2 border-dashed border-stone-300 rounded-2xl pointer-events-none"></div>
+                
+                <div className="relative z-10 animate-fade-in-up w-full max-w-sm">
+                    <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl border-4 border-blue-500">
+                        <Users className="w-12 h-12 text-blue-700" />
+                    </div>
+                    <h3 className="text-3xl font-bold font-display text-gray-800 mb-4">
+                        {readHistory.length} Người Đã Đọc
+                    </h3>
+                    <p className="text-gray-600 font-serif italic mb-8">
+                        Những cán bộ, chiến sĩ đã nắm vũ lực lịch sử giai đoạn <strong>{selectedMilestone?.year}</strong>
+                    </p>
+                    
+                    <div className="bg-white p-6 rounded-xl shadow-md border border-stone-200 mb-6">
+                        <p className="text-xs text-stone-500 uppercase tracking-widest font-bold mb-2">Thông tin tài liệu</p>
+                        <p className="text-sm font-bold text-stone-700 mb-1">{selectedMilestone?.title}</p>
+                        <p className="text-xs text-stone-500">Năm {selectedMilestone?.year}</p>
+                    </div>
+
+                    <p className="text-stone-400 text-sm">Lướt qua các trang để xem danh sách đầy đủ</p>
+                </div>
+                
+                <div className="absolute bottom-6 right-8 text-[10px] text-stone-400 font-bold uppercase tracking-widest">Trang Danh Sách</div>
+            </div>
+          </>
+      );
+  };
+
+  useEffect(() => {
+    const src = selectedMilestone?.narrationAudio;
+
+    if (!src) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
+      }
+      if (isAudioPlaying) setIsAudioPlaying(false);
+      return;
+    }
+
+    if (!audioRef.current || audioRef.current.src !== src) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      audioRef.current = new Audio(src);
+    }
+
+    if (isAudioPlaying) {
+      audioRef.current.play().catch(() => {
+        setIsAudioPlaying(false);
+      });
+    } else {
+      audioRef.current.pause();
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, [isAudioPlaying, selectedMilestone]);
 
   if (loading) {
       return (
@@ -578,157 +1178,183 @@ const History: React.FC = () => {
          </div>
        )}
 
-       <div className="relative h-[60vh] flex items-center justify-center overflow-hidden">
-           <img src={settings.heroImage} className="absolute inset-0 w-full h-full object-cover scale-105 animate-pulse-slow" />
-           <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-[#fdfbf7]"></div>
-           <div className="relative z-10 text-center px-4 animate-fade-in-up w-full max-w-5xl">
-               <div className="inline-flex items-center px-6 py-2 rounded-full border border-yellow-500/50 bg-black/40 backdrop-blur-md mb-8">
-                   <Star className="w-4 h-4 text-yellow-500 mr-2 fill-current animate-pulse"/>
-                   <span className="text-yellow-500 text-xs font-bold uppercase tracking-[0.3em]">
-                       Biên niên sử hào hùng
-                   </span>
-               </div>
-               
-               <h1 className="text-6xl md:text-9xl font-display font-black uppercase tracking-tighter mb-8 transform hover:scale-105 transition-transform duration-700 cursor-default select-none relative z-10"
-                   style={{
-                       background: 'radial-gradient(ellipse at center, #ffffac 0%, #d2b45a 30%, #a8882d 60%, #876619 100%)',
-                       WebkitBackgroundClip: 'text',
-                       WebkitTextFillColor: 'transparent',
-                       textShadow: '0px 4px 3px rgba(0,0,0,0.4), 0px 8px 13px rgba(0,0,0,0.1), 0px 18px 23px rgba(0,0,0,0.1)',
-                       filter: 'drop-shadow(0 5px 0 #5c420b)'
-                   }}
-               >
-                   Sư Đoàn 324
-               </h1>
-
-               <p className="text-stone-300 font-serif italic text-lg md:text-xl max-w-3xl mx-auto border-t border-stone-500/50 pt-8 leading-relaxed">
-                   <span className="text-yellow-500 text-3xl mr-2">"</span>
-                   Trung dũng, kiên cường, liên tục tấn công, đoàn kết hiệp đồng, lập công tập thể
-                   <span className="text-yellow-500 text-3xl ml-2">"</span>
-               </p>
-           </div>
-       </div>
-
-       <div className="max-w-6xl mx-auto px-4 py-12 relative z-20 -mt-24">
-          <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-1 bg-stone-300 md:-translate-x-1/2 rounded-full opacity-50"></div>
+       {/* Main Content */}
+       {selectedMilestone ? (
+        // Book View Modal
+        <div className="fixed inset-0 z-[100] bg-stone-900/95 backdrop-blur-md flex items-center justify-center p-0 md:p-8 animate-fade-in">
+          <button 
+            onClick={() => {
+              setSelectedMilestone(null);
+              setCurrentSpread(0);
+              setShowReadersPage(false);
+              setIsAudioPlaying(false);
+            }} 
+            className="absolute top-4 right-4 md:top-8 md:right-8 text-white/50 hover:text-white z-[120] transition-colors p-3 bg-white/10 rounded-full hover:bg-white/20 border border-white/10 group"
+          >
+            <X className="w-6 h-6 group-hover:rotate-90 transition-transform" />
+          </button>
           
-          <div className="space-y-24">
-              {milestones.length > 0 ? milestones.map((item, index) => {
-                  const isEven = index % 2 === 0;
-                  return (
-                      <div key={item.id} className={`flex flex-col md:flex-row items-center relative ${isEven ? '' : 'md:flex-row-reverse'}`}>
-                          
-                          <div className="absolute left-4 md:left-1/2 md:-translate-x-1/2 w-8 h-8 rounded-full bg-yellow-500 border-4 border-[#fdfbf7] shadow-lg z-10 flex items-center justify-center transform -translate-x-1/2 md:translate-x-0 mt-8 md:mt-0">
-                             <div className="w-2 h-2 bg-white rounded-full"></div>
-                          </div>
-                          
-                          <div className={`w-full md:w-1/2 pl-12 md:pl-0 ${isEven ? 'md:pr-20 md:text-right' : 'md:pl-20 md:text-left'} group perspective-1000`}>
-                              <div 
-                                className="bg-white p-3 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 cursor-pointer transform group-hover:rotate-x-2 border-b-4 border-stone-200 hover:border-yellow-500 relative overflow-hidden"
-                                onClick={() => { setSelectedMilestone(item); setCurrentSpread(0); }}
-                              >
-                                  <div className="relative h-64 rounded-xl overflow-hidden mb-5 z-10">
-                                      <img src={item.image} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
-                                      <div className="absolute top-4 right-4 bg-yellow-500 text-green-900 text-xs font-bold px-4 py-1.5 rounded-full shadow-lg z-20 border border-yellow-300">
-                                          Năm {item.year}
-                                      </div>
-                                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                          <div className="px-6 py-2.5 bg-white/95 backdrop-blur text-green-900 text-xs font-bold uppercase tracking-widest rounded-full opacity-0 transform translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 flex items-center shadow-lg hover:scale-105">
-                                              <BookOpen className="w-4 h-4 mr-2" /> Đọc lịch sử
-                                          </div>
-                                      </div>
-                                  </div>
-
-                                  <div className="px-6 pb-6 relative z-10">
-                                      <h3 className="text-3xl font-display font-bold text-green-900 mb-3 group-hover:text-yellow-600 transition-colors leading-tight">
-                                          {item.title}
-                                      </h3>
-                                      <p className="text-stone-500 font-serif text-sm line-clamp-2 leading-relaxed italic">
-                                          {item.subtitle}
-                                      </p>
-                                  </div>
-                              </div>
-                          </div>
-                          
-                          <div className="w-full md:w-1/2"></div>
-                      </div>
-                  );
-              }) : (
-                  <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-stone-100">
-                      <p className="text-stone-400 font-serif italic">Đang cập nhật dữ liệu lịch sử...</p>
-                  </div>
-              )}
-          </div>
-       </div>
-
-       {selectedMilestone && (
-         <div className="fixed inset-0 z-[100] bg-stone-900/95 backdrop-blur-md flex items-center justify-center p-0 md:p-8 animate-fade-in">
-            <button 
-                onClick={() => setSelectedMilestone(null)} 
-                className="absolute top-4 right-4 md:top-8 md:right-8 text-white/50 hover:text-white z-[120] transition-colors p-3 bg-white/10 rounded-full hover:bg-white/20 border border-white/10 group"
-            >
-                <X className="w-6 h-6 group-hover:rotate-90 transition-transform" />
-            </button>
+          <div className="relative w-full max-w-6xl aspect-[1.4/1] md:aspect-[1.6/1] max-h-[90vh] bg-white shadow-2xl flex flex-col md:flex-row overflow-hidden rounded-lg">
             
-            <div className="relative w-full max-w-6xl aspect-[1.4/1] md:aspect-[1.6/1] max-h-[90vh] bg-[#fdfbf7] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.8)] flex flex-col md:flex-row overflow-hidden md:rounded-r-lg rounded-sm border-r-8 border-b-8 border-stone-800">
-                
-                {hasQuiz && currentSpread !== totalSpreads - 1 && (
-                    <button 
-                        onClick={jumpToQuiz}
-                        className="absolute -right-2 md:-right-4 top-24 z-20 w-8 md:w-10 h-32 bg-red-700 rounded-r-md shadow-[4px_4px_10px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-pointer hover:bg-red-600 transition-all border-l border-red-800 group"
-                        title="Đi tới bài thi"
-                    >
-                        <div className="rotate-90 text-white font-bold uppercase tracking-widest text-[10px] whitespace-nowrap flex items-center gap-2">
-                             <HelpCircle className="w-3 h-3 -rotate-90" /> Thi nhận thức
-                        </div>
-                    </button>
-                )}
-
-                <div className={`flex w-full h-full transition-opacity duration-300 ${isFlipping ? 'opacity-40' : 'opacity-100'}`}>
-                    {currentSpread === 0 
-                        ? renderCover()
-                        : (currentSpread === totalSpreads - 1 && hasQuiz) 
-                            ? renderQuizPage()
-                            : renderContentPages(currentSpread)
-                    }
+            {/* Book Spine */}
+            <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-8 -ml-4 bg-gradient-to-r from-amber-900 to-amber-800 z-10 shadow-lg">
+              <div className="h-full flex items-center justify-center">
+                <div className="text-white text-xs font-bold writing-mode-vertical transform rotate-180" style={{ writingMode: 'vertical-rl' }}>
+                  {selectedMilestone?.title}
                 </div>
-
-                <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-24 -ml-12 bg-gradient-to-r from-stone-900/5 via-stone-900/20 to-stone-900/5 z-20 pointer-events-none mix-blend-multiply filter blur-sm"></div>
-                <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-stone-400/30 z-30"></div>
-
-                <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-stone-900/10 to-transparent flex justify-center items-end pb-6 space-x-12 z-30 pointer-events-none">
-                    <button 
-                        disabled={currentSpread === 0 || isFlipping}
-                        onClick={() => handlePageChange('prev')}
-                        className="pointer-events-auto w-12 h-12 rounded-full bg-stone-800 text-yellow-500 flex items-center justify-center shadow-xl disabled:opacity-0 hover:scale-110 hover:bg-stone-700 transition-all border border-stone-600 group"
-                        title="Trang trước"
-                    >
-                        <ChevronLeft className="w-6 h-6 group-hover:-translate-x-1 transition-transform" />
-                    </button>
-                    
-                    <span className="bg-stone-800/90 text-white px-6 py-1.5 rounded-full text-[10px] font-bold tracking-[0.2em] backdrop-blur-md shadow-lg border border-stone-600/50 uppercase">
-                        {currentSpread === 0 
-                            ? 'Bìa sách' 
-                            : (currentSpread === totalSpreads - 1 && hasQuiz) 
-                                ? 'Bài tập' 
-                                : `Trang ${currentSpread} / ${totalSpreads - 1}`
-                        }
-                    </span>
-
-                    <button 
-                        disabled={currentSpread >= totalSpreads - 1 || isFlipping}
-                        onClick={() => handlePageChange('next')}
-                        className="pointer-events-auto w-12 h-12 rounded-full bg-stone-800 text-yellow-500 flex items-center justify-center shadow-xl disabled:opacity-0 hover:scale-110 hover:bg-stone-700 transition-all border border-stone-600 group"
-                        title="Trang sau"
-                    >
-                         {currentSpread === totalSpreads - 2 && hasQuiz 
-                            ? <HelpCircle className="w-6 h-6 animate-pulse text-yellow-400" /> 
-                            : <ChevronRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                         }
-                    </button>
-                </div>
+              </div>
             </div>
-         </div>
+            
+            {/* Main Content */}
+            <div className={`flex w-full h-full transition-opacity duration-500 ${isFlipping ? 'opacity-50' : 'opacity-100'}`}>
+                {showReadersPage
+                  ? renderReadersPage()
+                  : (currentSpread === 0 
+                      ? renderCover()
+                      : (currentSpread === totalSpreads - 1 && hasQuiz) 
+                        ? renderQuizPage()
+                        : renderContentPages(currentSpread)
+                    )
+                }
+            </div>
+
+            {/* Navigation Controls */}
+            <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-4 z-20">
+              <button 
+                disabled={currentSpread === 0 || isFlipping}
+                onClick={() => handlePageChange('prev')}
+                className="w-10 h-10 rounded-full bg-gray-800 text-white flex items-center justify-center shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition-all"
+                title="Trang trước"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              
+              <div className="bg-gray-800/90 text-white px-4 py-2 rounded-full text-xs font-medium backdrop-blur-sm">
+                {currentSpread === 0 
+                  ? 'Bìa' 
+                  : (currentSpread === totalSpreads - 1 && hasQuiz) 
+                    ? 'Bài tập' 
+                    : `Trang ${currentSpread}/${totalSpreads - 1}`
+                }
+              </div>
+
+              <button 
+                disabled={currentSpread >= totalSpreads - 1 || isFlipping}
+                onClick={() => handlePageChange('next')}
+                className="w-10 h-10 rounded-full bg-gray-800 text-white flex items-center justify-center shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-700 transition-all"
+                title="Trang sau"
+              >
+                 {currentSpread === totalSpreads - 2 && hasQuiz 
+                    ? <HelpCircle className="w-5 h-5 animate-pulse" /> 
+                    : <ChevronRight className="w-5 h-5" />
+                 }
+              </button>
+            </div>
+            
+            {/* Quick Actions */}
+            <div className="absolute top-4 left-4 flex items-center gap-2 z-20">
+              <button
+                onClick={() => setShowReadersPage(true)}
+                className="w-10 h-10 rounded-full bg-white/90 text-stone-800 flex items-center justify-center shadow-lg hover:bg-white transition-all"
+                title="Danh sách người đã đọc"
+              >
+                <Users className="w-5 h-5" />
+              </button>
+
+              {selectedMilestone?.narrationAudio && (
+                <button
+                  onClick={() => setIsAudioPlaying(v => !v)}
+                  className="w-10 h-10 rounded-full bg-white/90 text-stone-800 flex items-center justify-center shadow-lg hover:bg-white transition-all"
+                  title={isAudioPlaying ? 'Tắt thuyết minh' : 'Nghe thuyết minh'}
+                >
+                  {isAudioPlaying ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                </button>
+              )}
+
+              {hasQuiz && (
+                <button
+                  onClick={jumpToQuiz}
+                  className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg hover:bg-red-700 transition-all"
+                  title="Đi tới bài thi"
+                >
+                  <HelpCircle className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+       ) : (
+        // Milestones List View
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Filter Controls */}
+          <FilterControls />
+          
+          {/* Loading State */}
+          {loading && (
+            <div className="flex justify-center items-center py-20">
+              <div className="flex flex-col items-center">
+                <Loader2 className="w-12 h-12 animate-spin text-green-700 mb-4" />
+                <p className="text-stone-600 font-medium">Đang tải mốc lịch sử...</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Empty State */}
+          {!loading && filteredMilestones.length === 0 && (
+            <div className="text-center py-20">
+              <BookOpen className="w-16 h-16 text-stone-300 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-stone-600 mb-2">Không tìm thấy mốc lịch sử</h3>
+              <p className="text-stone-500">Thử điều chỉnh bộ lọc hoặc tìm kiếm với từ khóa khác</p>
+            </div>
+          )}
+          
+          {/* Milestones Grid/List */}
+          {!loading && filteredMilestones.length > 0 && (
+            <div className={viewMode === 'grid' 
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6' 
+              : 'space-y-4'
+            }>
+              {filteredMilestones.map((milestone, index) => (
+                viewMode === 'grid' ? (
+                  <MilestoneCard key={milestone.id} milestone={milestone} index={index} onSelect={() => handleMilestoneSelect(milestone)} />
+                ) : (
+                  <div
+                    key={milestone.id}
+                    className="bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-200 p-4 border border-stone-200 hover:border-green-400 cursor-pointer"
+                    onClick={() => handleMilestoneSelect(milestone)}
+                  >
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={milestone.image}
+                        alt={milestone.title}
+                        className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded-full uppercase tracking-wider">
+                            Năm {milestone.year}
+                          </span>
+                          {milestone.quiz && milestone.quiz.length > 0 && (
+                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium">
+                              {milestone.quiz.length} câu hỏi
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="text-base font-bold text-gray-900 mb-1 truncate hover:text-green-700 transition-colors duration-200">
+                          {milestone.title}
+                        </h3>
+                        <p className="text-sm text-stone-600 truncate">{milestone.subtitle}</p>
+                      </div>
+                      <button className="p-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors duration-200">
+                        <BookOpen className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              ))}
+            </div>
+          )}
+        </div>
        )}
     </div>
   );

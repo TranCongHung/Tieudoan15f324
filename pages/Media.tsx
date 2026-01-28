@@ -11,33 +11,8 @@ const Media: React.FC = () => {
   const [selectedVideo, setSelectedVideo] = useState<MediaItem | null>(null);
   const { settings } = useSiteSettings();
 
-  // Lấy direct audio URL từ YouTube (chỉ audio stream)
-  const getYouTubeAudioUrl = (url: string): string => {
-    if (!url) return '';
-    
-    // Trích xuất video ID
-    let videoId = '';
-    
-    // Format: https://youtu.be/VIDEO_ID
-    const youtubeShortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
-    if (youtubeShortMatch) {
-      videoId = youtubeShortMatch[1];
-    } else {
-      // Format: https://www.youtube.com/watch?v=VIDEO_ID (với các parameters khác)
-      const youtubeMatch = url.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/);
-      if (youtubeMatch) {
-        videoId = youtubeMatch[1];
-      }
-    }
-    
-    if (!videoId) return url;
-    
-    // Sử dụng YouTube embed với autoplay và parameter để ẩn video
-    return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&loop=1&playlist=${videoId}&showinfo=0&modestbranding=1&fs=0`;
-  };
-
-  // Chuyển đổi URL YouTube sang embed format cho cả video và audio
-  const getYouTubeEmbedUrl = (url: string, type: 'video' | 'audio' = 'video'): string => {
+  // Chuyển đổi URL YouTube sang embed format
+  const getYouTubeEmbedUrl = (url: string): string => {
     if (!url) return '';
     
     // Nếu đã là embed URL thì giữ nguyên
@@ -46,27 +21,22 @@ const Media: React.FC = () => {
     // Trích xuất video ID từ các format khác nhau
     let videoId = '';
     
-    // Format: https://youtu.be/VIDEO_ID
+    // Format: https://youtu.be/VIDEO_ID hoặc youtu.be/VIDEO_ID
     const youtubeShortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
     if (youtubeShortMatch) {
       videoId = youtubeShortMatch[1];
     } else {
-      // Format: https://www.youtube.com/watch?v=VIDEO_ID (với các parameters khác)
-      const youtubeMatch = url.match(/youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/);
+      // Format: https://www.youtube.com/watch?v=VIDEO_ID
+      const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtube\.com\/.*[?&]v=)([a-zA-Z0-9_-]+)/);
       if (youtubeMatch) {
         videoId = youtubeMatch[1];
       }
     }
     
-    // Nếu không phải YouTube URL thì trả về url gốc (có thể là file upload)
+    // Nếu không phải YouTube URL thì trả về url gốc (có thể là video upload)
     if (!videoId) return url;
     
-    if (type === 'video') {
-      return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&fs=1`;
-    } else {
-      // Sử dụng YouTube no-cookie embed với audio-focused parameters
-      return `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=0&mute=0&loop=1&playlist=${videoId}&showinfo=0&modestbranding=1`;
-    }
+    return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&fs=1`;
   };
 
   useEffect(() => {
@@ -122,49 +92,13 @@ const Media: React.FC = () => {
         )}
 
         {activeTab === 'audio' && (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {audios.map((audio) => (
-                    <div key={audio.id} className="bg-white rounded-xl p-4 shadow-md border-l-4" style={{ borderColor: settings.primaryColor }}>
-                        <div className="flex items-center space-x-4">
-                            <Headphones className="w-8 h-8" style={{ color: settings.primaryColor }} />
-                            <div className="flex-grow">
-                                <h3 className="text-lg font-bold text-gray-900 font-display">{audio.title}</h3>
-                                <p className="text-gray-500 text-xs">{audio.date}</p>
-                            </div>
-                        </div>
-                        <div className="mt-3">
-                            {audio.url.includes('youtube.com') || audio.url.includes('youtu.be') ? (
-                                <div className="bg-gray-50 p-3 rounded-lg">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm text-gray-600">🎵 YouTube Audio</span>
-                                        <button 
-                                            onClick={() => {
-                                                const audioUrl = getYouTubeAudioUrl(audio.url);
-                                                window.open(audioUrl, '_blank');
-                                            }}
-                                            className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
-                                        >
-                                            Mở Audio
-                                        </button>
-                                    </div>
-                                    <div className="relative" style={{ paddingBottom: '25%' }}>
-                                        <iframe 
-                                            className="absolute inset-0 w-full h-full rounded-lg"
-                                            src={getYouTubeEmbedUrl(audio.url, 'audio')} 
-                                            title={audio.title}
-                                            allowFullScreen
-                                            sandbox="allow-same-origin allow-scripts allow-popups allow-presentation"
-                                        ></iframe>
-                                    </div>
-                                </div>
-                            ) : (
-                                <audio controls className="w-full h-10">
-                                    <source src={audio.url} type="audio/mpeg" />
-                                    <source src={audio.url} type="audio/wav" />
-                                    <source src={audio.url} type="audio/ogg" />
-                                    <source src={audio.url} type="audio/mp4" />
-                                </audio>
-                            )}
+                    <div key={audio.id} className="bg-white rounded-xl p-6 shadow-md border-l-4 flex items-center space-x-6" style={{ borderColor: settings.primaryColor }}>
+                        <Headphones className="w-10 h-10" style={{ color: settings.primaryColor }} />
+                        <div className="flex-grow">
+                            <h3 className="text-xl font-bold text-gray-900 font-display">{audio.title}</h3>
+                            <div className="w-full bg-gray-100 rounded-full h-10 flex items-center px-2 mt-3"><audio controls className="w-full h-8"><source src={audio.url} type="audio/mpeg" /></audio></div>
                         </div>
                     </div>
                 ))}
@@ -176,7 +110,7 @@ const Media: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
             <div className="relative w-full max-w-5xl bg-black rounded-lg overflow-hidden">
                 <div className="flex justify-between items-center p-4 bg-stone-900 text-white"><h3 className="font-bold truncate">{selectedVideo.title}</h3><button onClick={() => setSelectedVideo(null)} className="text-gray-400 hover:text-white"><X className="w-6 h-6" /></button></div>
-                <div className="relative pt-[56.25%]"><iframe className="absolute inset-0 w-full h-full" src={getYouTubeEmbedUrl(selectedVideo.url)} title={selectedVideo.title} allowFullScreen></iframe></div>
+                <div className="relative pt-[56.25%]"><iframe className="absolute inset-0 w-full h-full" src={selectedVideo.url} title={selectedVideo.title} allowFullScreen></iframe></div>
             </div>
         </div>
       )}
