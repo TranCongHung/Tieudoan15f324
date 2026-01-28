@@ -1,0 +1,16 @@
+# Simple .htaccess for InfinityFree - Fix MIME type for JS modules
+AddType application/javascript .js
+AddType application/javascript .mjs
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options nosniff
+</IfModule>
+
+# Set index-build.html as default (build version)
+DirectoryIndex index-build.html index.html index.php
+
+# Handle React Router
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index-build.html [L]

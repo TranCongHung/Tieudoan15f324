@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tiểu đoàn 15 - Sư đoàn 324</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              inter: ['Inter', 'sans-serif'],
+              merriweather: ['Merriweather', 'serif'],
+              playfair: ['Playfair Display', 'serif'],
+            },
+            colors: {
+              'army-green': '#4a5d23',
+              'army-brown': '#8b4513',
+              'army-beige': '#f5e6d3',
+              'army-dark': '#2c3e50',
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-in-out',
+              'slide-up': 'slideUp 0.3s ease-out',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: '0' },
+                '100%': { opacity: '1' },
+              },
+              slideUp: {
+                '0%': { transform: 'translateY(10px)', opacity: '0' },
+                '100%': { transform: 'translateY(0)', opacity: '1' },
+              },
+            },
+          },
+        },
+      };
+    </script>
+    
+    <!-- Import Map for CDN -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@19.2.3",
+        "react-dom": "https://esm.sh/react-dom@19.2.3",
+        "react-dom/": "https://esm.sh/react-dom@19.2.3/",
+        "react/": "https://esm.sh/react@19.2.3/"
+      }
+    }
+    </script>
+  </head>
+  <body class="bg-texture">
+    <div id="root">
+      <!-- Loading placeholder -->
+      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #f5e6d3;">
+        <div style="text-align: center;">
+          <div style="font-size: 2rem; color: #4a5d23; margin-bottom: 1rem;">⚡ Tiểu Đoàn 15</div>
+          <div style="color: #8b4513;">Đang tải...</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Simple React App without external modules -->
+    <script type="module">
+      // Basic React app without complex modules
+      const { useState, useEffect } = React;
+      const { createRoot } = ReactDOM;
+
+      function App() {
+        const [loading, setLoading] = useState(true);
+
+        useEffect(() => {
+          setTimeout(() => setLoading(false), 1000);
+        }, []);
+
+        if (loading) {
+          return React.createElement('div', {
+            style: {
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100vh',
+              background: '#f5e6d3'
+            }
+          }, React.createElement('div', {
+            style: { textAlign: 'center' }
+          }, [
+            React.createElement('div', {
+              key: 'title',
+              style: { fontSize: '2rem', color: '#4a5d23', marginBottom: '1rem' }
+            }, '⚡ Tiểu Đoàn 15'),
+            React.createElement('div', {
+              key: 'loading',
+              style: { color: '#8b4513' }
+            }, 'Đang tải...')
+          ]));
+        }
+
+        return React.createElement('div', {
+          style: {
+            minHeight: '100vh',
+            background: '#f5e6d3',
+            padding: '2rem'
+          }
+        }, [
+          React.createElement('header', {
+            key: 'header',
+            style: {
+              background: '#4a5d23',
+              color: 'white',
+              padding: '1rem',
+              textAlign: 'center',
+              marginBottom: '2rem'
+            }
+          }, React.createElement('h1', {
+            style: { margin: 0, fontSize: '2rem' }
+          }, 'Tiểu Đoàn 15 - Sư Đoàn 324')),
+          
+          React.createElement('main', {
+            key: 'main',
+            style: { maxWidth: '1200px', margin: '0 auto' }
+          }, [
+            React.createElement('section', {
+              key: 'hero',
+              style: {
+                background: 'white',
+                padding: '2rem',
+                borderRadius: '8px',
+                marginBottom: '2rem',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              }
+            }, React.createElement('div', {
+              style: { textAlign: 'center' }
+            }, [
+              React.createElement('h2', {
+                key: 'title',
+                style: { color: '#4a5d23', marginBottom: '1rem' }
+              }, 'Chào Mừng Đến Với Cổng Thông Tin'),
+              React.createElement('p', {
+                key: 'desc',
+                style: { color: '#666', lineHeight: '1.6' }
+              }, 'Website đang trong quá trình hoàn thiện. Vui lòng quay lại sau.')
+            ])),
+            
+            React.createElement('section', {
+              key: 'features',
+              style: {
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                gap: '1rem'
+              }
+            }, [
+              React.createElement('div', {
+                key: 'feat1',
+                style: {
+                  background: 'white',
+                  padding: '1.5rem',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }
+              }, React.createElement('h3', {
+                style: { color: '#8b4513', marginBottom: '0.5rem' }
+              }, 'Tin Tức')),
+              
+              React.createElement('div', {
+                key: 'feat2',
+                style: {
+                  background: 'white',
+                  padding: '1.5rem',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }
+              }, React.createElement('h3', {
+                style: { color: '#8b4513', marginBottom: '0.5rem' }
+              }, 'Lịch Sử')),
+              
+              React.createElement('div', {
+                key: 'feat3',
+                style: {
+                  background: 'white',
+                  padding: '1.5rem',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }
+              }, React.createElement('h3', {
+                style: { color: '#8b4513', marginBottom: '0.5rem' }
+              }, 'Liên Hệ'))
+            ])
+          ]),
+          
+          React.createElement('footer', {
+            key: 'footer',
+            style: {
+              background: '#2c3e50',
+              color: 'white',
+              padding: '2rem',
+              textAlign: 'center',
+              marginTop: '2rem'
+            }
+          }, React.createElement('p', {
+            style: { margin: 0 }
+          }, '© 2025 Tiểu Đoàn 15 - Sư Đoàn 324'))
+        ]);
+      }
+
+      // Render the app
+      const root = createRoot(document.getElementById('root'));
+      root.render(React.createElement(App));
+    </script>
+  </body>
+</html>

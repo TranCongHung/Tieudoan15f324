@@ -1,0 +1,78 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tiểu đoàn 15 - Sư đoàn 324</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Merriweather', 'serif'],
+              display: ['Playfair Display', 'serif'],
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.6s ease-out',
+              'fade-in-up': 'fadeInUp 0.8s ease-out',
+              'scale-up': 'scaleUp 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+              'bounce-slow': 'bounce 3s infinite',
+            },
+            keyframes: {
+              fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+              fadeInUp: { '0%': { opacity: '0', transform: 'translateY(30px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+              scaleUp: { '0%': { opacity: '0', transform: 'scale(0.95)' }, '100%': { opacity: '1', transform: 'scale(1)' } }
+            },
+          }
+        }
+      }
+    </script>
+
+    <style>
+      body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; color: #1f2937; }
+      ::-webkit-scrollbar { width: 8px; }
+      ::-webkit-scrollbar-thumb { background: #c2c8d0; border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: #15803d; }
+      .bg-texture {
+        background-color: #f9fafb;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23166534' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      }
+    </style>
+
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "express": "https://esm.sh/express@^5.2.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "dotenv/": "https://esm.sh/dotenv@^17.2.3/",
+    "cors": "https://esm.sh/cors@^2.8.5",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "body-parser": "https://esm.sh/body-parser@^2.2.2",
+    "@prisma/client": "https://esm.sh/@prisma/client@^7.2.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.48.1"
+  }
+}
+</script>
+  <script type="module" crossorigin src="./assets/index-DmR4l477.js"></script>
+</head>
+  <body class="bg-texture">
+    <div id="root"></div>
+
+  </body>
+</html>
