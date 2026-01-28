@@ -50,6 +50,7 @@ const INITIAL_MILESTONES: Milestone[] = [
       content: "Ngày 01/07/1955, Sư đoàn 324 được thành lập tại Tĩnh Gia, Thanh Hóa.",
       image: "https://picsum.photos/600/400?random=50",
       icon: "Flag",
+      narrationAudio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
       story: `Ngày 1 tháng 7 năm 1955, tại vùng biển Tĩnh Gia (Thanh Hóa), Sư đoàn 324 được thành lập. Đây là Sư đoàn chủ lực cơ động đầu tiên của Quân khu 4, ra đời trong bối cảnh miền Bắc vừa được giải phóng, bắt tay vào công cuộc xây dựng CNXH, miền Nam tiếp tục cuộc đấu tranh thống nhất nước nhà.
 
 Ngay từ những ngày đầu thành lập, cán bộ, chiến sĩ Sư đoàn đã quán triệt sâu sắc nhiệm vụ chính trị, nhanh chóng ổn định tổ chức biên chế, bước vào huấn luyện quân sự, giáo dục chính trị với khí thế "Thao trường đổ mồ hôi, chiến trường bớt đổ máu".
@@ -84,6 +85,7 @@ Những năm tháng đầu tiên ấy, dù thiếu thốn trăm bề về cơ s�
       content: "Tham gia các chiến dịch lớn tại Cồn Tiên, Dốc Miếu, đường 9 Nam Lào.",
       image: "https://picsum.photos/600/400?random=51",
       icon: "Map",
+      narrationAudio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
       story: `Những năm tháng chiến đấu trên chiến trường Trị - Thiên khói lửa là quãng thời gian gian khổ nhất nhưng cũng vẻ vang nhất của Sư đoàn. Nơi đây được ví như "túi bom", "chảo lửa", nơi thử thách bản lĩnh và ý chí của người lính.
 
 Tại Cồn Tiên, Dốc Miếu, Đường 9, Khe Sanh... những cái tên đã đi vào lịch sử như những mốc son chói lọi. Đối mặt với kẻ thù được trang bị vũ khí tối tân, bom đạn cày xới nát từng tấc đất, nhưng với ý chí "Một tấc không đi, một ly không rời", cán bộ chiến sĩ Sư đoàn đã bám trụ kiên cường.
@@ -107,6 +109,7 @@ Danh hiệu "Đoàn Ngự Bình" vang lên khiến quân thù khiếp sợ. Nh�
       content: "Tham gia chiến dịch Huế - Đà Nẵng, thần tốc tiến quân giải phóng miền Nam.",
       image: "https://picsum.photos/600/400?random=52",
       icon: "Star",
+      narrationAudio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
       story: `Mùa xuân năm 1975, thực hiện mệnh lệnh "Thần tốc, thần tốc hơn nữa, táo bạo, táo bạo hơn nữa", Sư đoàn 324 đã cùng các cánh quân khác ồ ạt tiến về phía Nam trong khí thế hào hùng của cả dân tộc ra trận.
 
 Tham gia chiến dịch Huế - Đà Nẵng, Sư đoàn đã đập tan tuyến phòng thủ kiên cố của địch ở phía Tây Nam Huế, cắt đứt đường rút lui của địch, góp phần quan trọng giải phóng Cố đô Huế và thành phố Đà Nẵng. Khí thế tiến công như vũ bão, quân đi đến đâu dân đón chào đến đó.
@@ -130,6 +133,7 @@ Tiếp đà thắng lợi, Sư đoàn hành quân thần tốc vào Nam, tham gi
       content: "Xây dựng đơn vị vững mạnh toàn diện 'Mẫu mực, tiêu biểu'.",
       image: "https://picsum.photos/600/400?random=53",
       icon: "Award",
+      narrationAudio: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
       story: `Phát huy truyền thống vẻ vang, ngày nay Tiểu đoàn 15 và Sư đoàn 324 đang ra sức xây dựng đơn vị vững mạnh toàn diện "Mẫu mực, tiêu biểu". Nhiệm vụ bảo vệ Tổ quốc trong tình hình mới đặt ra những yêu cầu ngày càng cao.
 
 Công tác huấn luyện luôn bám sát phương châm "Cơ bản, thiết thực, vững chắc", coi trọng huấn luyện đồng bộ, chuyên sâu. Cán bộ chiến sĩ không ngừng học tập, rèn luyện làm chủ vũ khí trang bị kỹ thuật hiện đại, sẵn sàng chiến đấu cao.

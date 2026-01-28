@@ -108,6 +108,18 @@ export interface Milestone {
   icon: string;
   story: string;
   quiz: Question[];
+  narrationAudio?: string;
+}
+
+export interface ReadHistory {
+  id: string;
+  userId: string;
+  userName: string;
+  userRank: string;
+  unit: string;
+  milestoneId: string;
+  milestoneTitle: string;
+  readAt: string;
 }
 
 export interface SiteSettings {

@@ -88,8 +88,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
       const articleMatch = path.match(/^\/article\/(.+)$/);
-      if (articleMatch) setParams({ id: articleMatch[1] });
-      else setParams({});
+      if (articleMatch) {
+        setParams({ id: articleMatch[1] });
+        return;
+      }
+      
+      const historyDetailMatch = path.match(/^\/history\/detail\/(.+)$/);
+      if (historyDetailMatch) {
+        setParams({ id: historyDetailMatch[1] });
+        return;
+      }
+
+      const historyMatch = path.match(/^\/history\/(.+)$/);
+      if (historyMatch) {
+        setParams({ id: historyMatch[1] });
+        return;
+      }
+
+      setParams({});
   }, [path]);
 
   const navigate = useCallback((newPath: string) => {

@@ -65,6 +65,8 @@ const AdminDashboard: React.FC = () => {
   const [editorYear, setEditorYear] = useState(''); // For History
   const [editorSubtitle, setEditorSubtitle] = useState(''); // For History
   const [editorIcon, setEditorIcon] = useState('Flag'); // For History
+  const [editorNarrationAudio, setEditorNarrationAudio] = useState(''); // For History Narration Audio
+  const [narrationAudioSourceType, setNarrationAudioSourceType] = useState<'link' | 'upload'>('link');
   
   const [featuredImgSourceType, setFeaturedImgSourceType] = useState<'link' | 'upload'>('link');
   
@@ -89,6 +91,7 @@ const AdminDashboard: React.FC = () => {
   const [isVisualMode, setIsVisualMode] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null); // For Body content images
   const featuredImageInputRef = useRef<HTMLInputElement>(null); // For Featured image
+  const narrationAudioInputRef = useRef<HTMLInputElement>(null); // For Narration Audio
   const editorContentRef = useRef<HTMLDivElement>(null); // Ref for ContentEditable div
   const excelInputRef = useRef<HTMLInputElement>(null); // For Excel Upload
   const docInputRef = useRef<HTMLInputElement>(null); // For Document Upload
@@ -103,8 +106,50 @@ const AdminDashboard: React.FC = () => {
   const { logout, user: currentUser } = useAuth(); 
 
   useEffect(() => {
-    refreshData();
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+    if (currentUser.role !== 'admin') {
+      navigate('/');
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    // Load all critical data in parallel on mount
+    Promise.all([
+      apiService.getArticles().then(data => setArticles(data)),
+      apiService.getUsers().then(data => setUsersList(data)),
+      apiService.getHistory().then(data => setMilestones(data))
+    ]).catch(error => console.error("Failed to load initial data:", error));
   }, []);
+
+  // Lazy load data when switching tabs
+  useEffect(() => {
+    const tabDataMap: Record<Tab, string> = {
+      articles: 'articles',
+      personnel: 'users',
+      questions: 'questions',
+      scores: 'scores',
+      documents: 'documents',
+      media: 'media',
+      leaders: 'leaders',
+      history: 'history',
+      appearance: 'appearance'
+    };
+
+    if (activeTab === 'questions' && questions.length === 0) {
+      apiService.getQuestions().then(data => setQuestions(data));
+    } else if (activeTab === 'scores' && scores.length === 0) {
+      apiService.getScores().then(data => setScores(data));
+    } else if (activeTab === 'documents' && documents.length === 0) {
+      apiService.getDocuments().then(data => setDocuments(data));
+    } else if (activeTab === 'media' && mediaItems.length === 0) {
+      apiService.getMedia().then(data => setMediaItems(data));
+    } else if (activeTab === 'leaders' && leaders.length === 0) {
+      apiService.getLeaders().then(data => setLeaders(data));
+    }
+  }, [activeTab, questions.length, scores.length, documents.length, mediaItems.length, leaders.length]);
 
   useEffect(() => {
       setTempSettings(settings);
@@ -198,18 +243,58 @@ const AdminDashboard: React.FC = () => {
     }
   }, [selectedImg]);
 
-  const refreshData = async () => {
+  // Load data in parallel for better performance
+  const refreshData = async (tabToLoad?: Tab) => {
     try {
-        setArticles(await apiService.getArticles());
-        setUsersList(await apiService.getUsers());
-        setQuestions(await apiService.getQuestions());
-        setScores(await apiService.getScores());
-        setDocuments(await apiService.getDocuments());
-        setMediaItems(await apiService.getMedia());
-        setLeaders(await apiService.getLeaders());
-        setMilestones(await apiService.getHistory());
+      const targetTab = tabToLoad || activeTab;
+      const loadPromises: Promise<any>[] = [];
+
+      // Only load data for specific tabs when requested (lazy loading)
+      if (!tabToLoad || targetTab === 'articles') {
+        loadPromises.push(
+          apiService.getArticles().then(data => setArticles(data))
+        );
+      }
+      if (!tabToLoad || targetTab === 'personnel') {
+        loadPromises.push(
+          apiService.getUsers().then(data => setUsersList(data))
+        );
+      }
+      if (!tabToLoad || targetTab === 'questions') {
+        loadPromises.push(
+          apiService.getQuestions().then(data => setQuestions(data))
+        );
+      }
+      if (!tabToLoad || targetTab === 'scores') {
+        loadPromises.push(
+          apiService.getScores().then(data => setScores(data))
+        );
+      }
+      if (!tabToLoad || targetTab === 'documents') {
+        loadPromises.push(
+          apiService.getDocuments().then(data => setDocuments(data))
+        );
+      }
+      if (!tabToLoad || targetTab === 'media') {
+        loadPromises.push(
+          apiService.getMedia().then(data => setMediaItems(data))
+        );
+      }
+      if (!tabToLoad || targetTab === 'leaders') {
+        loadPromises.push(
+          apiService.getLeaders().then(data => setLeaders(data))
+        );
+      }
+      if (!tabToLoad || targetTab === 'history') {
+        loadPromises.push(
+          apiService.getHistory().then(data => setMilestones(data))
+        );
+      }
+
+      // Load all selected data in parallel
+      await Promise.all(loadPromises);
     } catch (error) {
-        console.error("Failed to load data:", error);
+      console.error("Failed to load data:", error);
     }
   };
 
@@ -441,6 +526,7 @@ const AdminDashboard: React.FC = () => {
             setEditorYear(item.year);
             setEditorSubtitle(item.subtitle);
             setEditorIcon(item.icon);
+            setEditorNarrationAudio(item.narrationAudio || '');
             // Load awareness questions if exist
             setAwarenessQuestions(item.quiz || []);
         }
@@ -465,6 +551,7 @@ const AdminDashboard: React.FC = () => {
             setEditorYear(new Date().getFullYear().toString());
             setEditorSubtitle('');
             setEditorIcon('Flag');
+            setEditorNarrationAudio('');
             // Reset awareness questions
             setAwarenessQuestions([]);
         }
@@ -608,6 +695,19 @@ const AdminDashboard: React.FC = () => {
       event.target.value = '';
   };
 
+  const handleNarrationAudioChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+          const base64 = e.target?.result as string;
+          setEditorNarrationAudio(base64);
+          setNarrationAudioSourceType('upload');
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';
+  };
+
   const saveContent = async () => {
       if (!editorTitle || !editorContent) {
           alert("Vui lòng nhập tiêu đề và nội dung.");
@@ -642,7 +742,8 @@ const AdminDashboard: React.FC = () => {
               story: editorContent, 
               image: editorImage || 'https://picsum.photos/600/400',
               icon: editorIcon,
-              quiz: awarenessQuestions
+              quiz: awarenessQuestions,
+              narrationAudio: editorNarrationAudio || undefined
           };
           
           if (editingItem) {
@@ -1517,6 +1618,74 @@ const AdminDashboard: React.FC = () => {
                               placeholder={activeTab === 'articles' ? "Mô tả ngắn về bài viết..." : "Nội dung hiển thị trên timeline (ngắn gọn)..."}
                           ></textarea>
                       </div>
+
+                      {activeTab === 'history' && (
+                          <div>
+                              <label className="block text-xs font-bold text-gray-500 uppercase mb-2 flex items-center">
+                                  <Music className="w-4 h-4 mr-2" />
+                                  Âm thanh thuyết minh
+                              </label>
+                              <div className="flex gap-3 mb-3">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                      <input 
+                                          type="radio" 
+                                          checked={narrationAudioSourceType === 'link'} 
+                                          onChange={() => setNarrationAudioSourceType('link')}
+                                          className="w-4 h-4"
+                                      />
+                                      <span className="text-xs">Link URL</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                      <input 
+                                          type="radio" 
+                                          checked={narrationAudioSourceType === 'upload'} 
+                                          onChange={() => setNarrationAudioSourceType('upload')}
+                                          className="w-4 h-4"
+                                      />
+                                      <span className="text-xs">Tải lên</span>
+                                  </label>
+                              </div>
+                              
+                              {narrationAudioSourceType === 'link' ? (
+                                  <input 
+                                      type="url" 
+                                      value={editorNarrationAudio} 
+                                      onChange={(e) => setEditorNarrationAudio(e.target.value)} 
+                                      className="w-full p-2 border border-gray-300 rounded text-sm" 
+                                      placeholder="Nhập URL âm thanh (VD: https://example.com/audio.mp3)"
+                                  />
+                              ) : (
+                                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-white hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => narrationAudioInputRef.current?.click()}>
+                                      {editorNarrationAudio ? (
+                                          <div className="flex items-center justify-between">
+                                              <div className="flex items-center gap-2">
+                                                  <Music className="w-6 h-6 text-blue-500" />
+                                                  <span className="text-xs text-gray-700">Âm thanh đã được chọn</span>
+                                              </div>
+                                              <audio src={editorNarrationAudio} controls className="max-w-xs" />
+                                          </div>
+                                      ) : (
+                                          <div className="py-4">
+                                              <Music className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                              <span className="text-xs text-gray-500">Tải file âm thanh lên (MP3, WAV, OGG...)</span>
+                                          </div>
+                                      )}
+                                      <input type="file" ref={narrationAudioInputRef} className="hidden" accept="audio/*" onChange={handleNarrationAudioChange} />
+                                  </div>
+                              )}
+                              {editorNarrationAudio && (
+                                  <button
+                                      onClick={() => {
+                                          setEditorNarrationAudio('');
+                                          setNarrationAudioSourceType('link');
+                                      }}
+                                      className="mt-2 text-xs text-red-600 hover:text-red-800 font-medium"
+                                  >
+                                      Xóa âm thanh
+                                  </button>
+                              )}
+                          </div>
+                      )}
 
                       {activeTab === 'history' && (
                           <div className="border-t border-gray-300 pt-6">

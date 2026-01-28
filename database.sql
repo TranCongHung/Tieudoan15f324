@@ -38,6 +38,7 @@ CREATE TABLE milestones (
     icon VARCHAR(50),
     story LONGTEXT,
     quiz JSON,
+    narration_audio LONGTEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

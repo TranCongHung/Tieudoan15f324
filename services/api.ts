@@ -3,6 +3,32 @@ import { Article, User, QuizResult, Milestone, MediaItem, Leader, Score, Documen
 import { supabase } from './supabase';
 
 class ApiClient {
+    // Simple cache for frequently accessed data with timeout
+    private cache: Map<string, { data: any; timestamp: number }> = new Map();
+    private cacheDuration = 5 * 60 * 1000; // 5 minutes cache
+
+    private getCached(key: string): any | null {
+        const cached = this.cache.get(key);
+        if (cached && Date.now() - cached.timestamp < this.cacheDuration) {
+            return cached.data;
+        }
+        this.cache.delete(key);
+        return null;
+    }
+
+    private setCache(key: string, data: any): void {
+        this.cache.set(key, { data, timestamp: Date.now() });
+    }
+
+    // Clear specific cache or all cache
+    private invalidateCache(key?: string): void {
+        if (key) {
+            this.cache.delete(key);
+        } else {
+            this.cache.clear();
+        }
+    }
+
     /**
      * Hàm bóc tách lỗi "Cú chốt": Chống lại [object Object] 100%
      */
@@ -86,6 +112,10 @@ class ApiClient {
     // --- BÀI VIẾT (Articles) ---
     async getArticles(): Promise<Article[]> {
         try {
+            // Check cache first
+            const cached = this.getCached('articles');
+            if (cached) return cached;
+
             const { data, error } = await supabase
                 .from('articles')
                 .select('*')
@@ -93,7 +123,7 @@ class ApiClient {
             
             if (error) throw new Error(this.parseError(error, "Tải bài viết"));
 
-            return (data || []).map((item: any) => ({
+            const result = (data || []).map((item: any) => ({
                 id: item.id,
                 title: item.title,
                 summary: item.summary,
@@ -102,6 +132,10 @@ class ApiClient {
                 date: item.date,
                 author: item.author
             })) as Article[];
+
+            // Cache the result
+            this.setCache('articles', result);
+            return result;
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -120,6 +154,7 @@ class ApiClient {
             };
             const { error } = await supabase.from('articles').insert([payload]);
             if (error) throw new Error(this.parseError(error, "Tạo bài viết"));
+            this.invalidateCache('articles'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -134,6 +169,7 @@ class ApiClient {
             }
             const { error } = await supabase.from('articles').update(payload).eq('id', id);
             if (error) throw new Error(this.parseError(error, "Cập nhật bài viết"));
+            this.invalidateCache('articles'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -143,6 +179,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('articles').delete().eq('id', id);
             if (error) throw new Error(this.parseError(error, "Xóa bài viết"));
+            this.invalidateCache('articles'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -151,6 +188,10 @@ class ApiClient {
     // --- LỊCH SỬ (Milestones) ---
     async getHistory(): Promise<Milestone[]> {
         try {
+            // Check cache first
+            const cached = this.getCached('milestones');
+            if (cached) return cached;
+
             const { data, error } = await supabase
                 .from('milestones')
                 .select('*')
@@ -158,10 +199,22 @@ class ApiClient {
             
             if (error) throw new Error(this.parseError(error, "Tải lịch sử"));
 
-            return (data || []).map((m: any) => ({
-                ...m,
-                quiz: typeof m.quiz === 'string' ? JSON.parse(m.quiz) : (m.quiz || [])
+            const result = (data || []).map((m: any) => ({
+                id: m.id,
+                year: m.year,
+                title: m.title,
+                subtitle: m.subtitle,
+                content: m.content,
+                image: m.image,
+                icon: m.icon,
+                story: m.story,
+                quiz: typeof m.quiz === 'string' ? JSON.parse(m.quiz) : (m.quiz || []),
+                narrationAudio: m.narration_audio || undefined
             }));
+
+            // Cache the result
+            this.setCache('milestones', result);
+            return result;
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -169,7 +222,7 @@ class ApiClient {
 
     async createMilestone(m: Milestone) {
         try {
-            const payload = {
+            const payload: any = {
                 id: m.id,
                 year: m.year,
                 title: m.title,
@@ -180,8 +233,12 @@ class ApiClient {
                 story: m.story,
                 quiz: JSON.stringify(m.quiz)
             };
+            if (m.narrationAudio) {
+                payload.narration_audio = m.narrationAudio;
+            }
             const { error } = await supabase.from('milestones').insert([payload]);
             if (error) throw new Error(this.parseError(error, "Tạo mốc lịch sử"));
+            this.invalidateCache('milestones'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -189,10 +246,20 @@ class ApiClient {
 
     async updateMilestone(id: string, m: Partial<Milestone>) {
         try {
-            const payload: any = { ...m };
-            if (m.quiz) payload.quiz = JSON.stringify(m.quiz);
+            const payload: any = {};
+            if (m.id !== undefined) payload.id = m.id;
+            if (m.year !== undefined) payload.year = m.year;
+            if (m.title !== undefined) payload.title = m.title;
+            if (m.subtitle !== undefined) payload.subtitle = m.subtitle;
+            if (m.content !== undefined) payload.content = m.content;
+            if (m.image !== undefined) payload.image = m.image;
+            if (m.icon !== undefined) payload.icon = m.icon;
+            if (m.story !== undefined) payload.story = m.story;
+            if (m.quiz !== undefined) payload.quiz = JSON.stringify(m.quiz);
+            if (m.narrationAudio !== undefined) payload.narration_audio = m.narrationAudio;
             const { error } = await supabase.from('milestones').update(payload).eq('id', id);
             if (error) throw new Error(this.parseError(error, "Cập nhật mốc lịch sử"));
+            this.invalidateCache('milestones'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -202,6 +269,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('milestones').delete().eq('id', id);
             if (error) throw new Error(this.parseError(error, "Xóa mốc lịch sử"));
+            this.invalidateCache('milestones'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -210,12 +278,21 @@ class ApiClient {
     // --- NGƯỜI DÙNG (Personnel) ---
     async getUsers(): Promise<User[]> {
         try {
+            // Check cache first
+            const cached = this.getCached('users');
+            if (cached) return cached;
+
             const { data, error } = await supabase.from('users').select('*');
             if (error) throw new Error(this.parseError(error, "Tải người dùng"));
-            return (data || []).map((u: any) => ({
+            
+            const result = (data || []).map((u: any) => ({
                 ...u,
                 rank: u.rank_name || u.rank
             })) as User[];
+
+            // Cache the result
+            this.setCache('users', result);
+            return result;
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -235,6 +312,7 @@ class ApiClient {
             };
             const { error } = await supabase.from('users').insert([payload]);
             if (error) throw new Error(this.parseError(error, "Thêm người dùng"));
+            this.invalidateCache('users'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -249,6 +327,7 @@ class ApiClient {
             }
             const { error } = await supabase.from('users').update(payload).eq('id', id);
             if (error) throw new Error(this.parseError(error, "Cập nhật người dùng"));
+            this.invalidateCache('users'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -258,6 +337,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('users').delete().eq('id', id);
             if (error) throw new Error(this.parseError(error, "Xóa người dùng"));
+            this.invalidateCache('users'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -292,15 +372,23 @@ class ApiClient {
     // --- CÂU HỎI (Questions) ---
     async getQuestions(): Promise<Question[]> {
         try {
+            // Check cache first
+            const cached = this.getCached('questions');
+            if (cached) return cached;
+
             const { data, error } = await supabase.from('questions').select('*');
             if (error) throw new Error(this.parseError(error, "Tải câu hỏi"));
-            return (data || []).map((q: any) => ({
+            const result = (data || []).map((q: any) => ({
                 id: q.id,
                 questionText: q.question_text,
                 options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
                 correctAnswerIndex: q.correct_answer_index,
                 explanation: q.explanation
             }));
+
+            // Cache the result
+            this.setCache('questions', result);
+            return result;
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -317,6 +405,7 @@ class ApiClient {
             };
             const { error } = await supabase.from('questions').insert([payload]);
             if (error) throw new Error(this.parseError(error, "Thêm câu hỏi"));
+            this.invalidateCache('questions'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -331,6 +420,7 @@ class ApiClient {
             if (q.explanation) payload.explanation = q.explanation;
             const { error } = await supabase.from('questions').update(payload).eq('id', id);
             if (error) throw new Error(this.parseError(error, "Cập nhật câu hỏi"));
+            this.invalidateCache('questions'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -340,6 +430,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('questions').delete().eq('id', id);
             if (error) throw new Error(this.parseError(error, "Xóa câu hỏi"));
+            this.invalidateCache('questions'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -348,9 +439,13 @@ class ApiClient {
     // --- ĐIỂM SỐ (Scores) ---
     async getScores(): Promise<Score[]> {
         try {
+            // Check cache first
+            const cached = this.getCached('scores');
+            if (cached) return cached;
+
             const { data, error } = await supabase.from('scores').select('*').order('date', { ascending: false });
             if (error) throw new Error(this.parseError(error, "Tải điểm số"));
-            return (data || []).map((s: any) => ({
+            const result = (data || []).map((s: any) => ({
                 id: s.id,
                 unitName: s.unit_name,
                 militaryScore: s.military_score,
@@ -360,6 +455,10 @@ class ApiClient {
                 totalScore: s.total_score,
                 date: s.date
             }));
+
+            // Cache the result
+            this.setCache('scores', result);
+            return result;
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -379,6 +478,7 @@ class ApiClient {
             };
             const { error } = await supabase.from('scores').insert([payload]);
             if (error) throw new Error(this.parseError(error, "Thêm điểm số"));
+            this.invalidateCache('scores'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -396,6 +496,7 @@ class ApiClient {
             if (s.date) payload.date = s.date;
             const { error } = await supabase.from('scores').update(payload).eq('id', id);
             if (error) throw new Error(this.parseError(error, "Cập nhật điểm số"));
+            this.invalidateCache('scores'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -405,6 +506,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('scores').delete().eq('id', id);
             if (error) throw new Error(this.parseError(error, "Xóa điểm số"));
+            this.invalidateCache('scores'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -413,9 +515,13 @@ class ApiClient {
     // --- KHO TÀI LIỆU (Documents) ---
     async getDocuments(): Promise<DocumentFile[]> {
         try {
+            // Check cache first
+            const cached = this.getCached('documents');
+            if (cached) return cached;
+
             const { data, error } = await supabase.from('documents').select('*');
             if (error) throw new Error(this.parseError(error, "Tải tài liệu"));
-            return (data || []).map((d: any) => ({
+            const result = (data || []).map((d: any) => ({
                 id: d.id,
                 name: d.name,
                 isFolder: d.is_folder,
@@ -424,6 +530,10 @@ class ApiClient {
                 date: d.date,
                 size: d.size
             }));
+
+            // Cache the result
+            this.setCache('documents', result);
+            return result;
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -442,6 +552,7 @@ class ApiClient {
             };
             const { error } = await supabase.from('documents').insert([payload]);
             if (error) throw new Error(this.parseError(error, "Thêm tài liệu"));
+            this.invalidateCache('documents'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -454,6 +565,7 @@ class ApiClient {
             if (d.parentId !== undefined) { payload.parent_id = d.parentId; delete payload.parentId; }
             const { error } = await supabase.from('documents').update(payload).eq('id', id);
             if (error) throw new Error(this.parseError(error, "Cập nhật tài liệu"));
+            this.invalidateCache('documents'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -463,6 +575,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('documents').delete().eq('id', id);
             if (error) throw new Error(this.parseError(error, "Xóa tài liệu"));
+            this.invalidateCache('documents'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -471,9 +584,17 @@ class ApiClient {
     // --- BAN CHỈ HUY (Leaders) ---
     async getLeaders(): Promise<Leader[]> {
         try {
+            // Check cache first
+            const cached = this.getCached('leaders');
+            if (cached) return cached;
+
             const { data, error } = await supabase.from('leaders').select('*');
             if (error) throw new Error(this.parseError(error, "Tải ban chỉ huy"));
-            return data || [];
+            const result = data || [];
+
+            // Cache the result
+            this.setCache('leaders', result);
+            return result;
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -483,6 +604,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('leaders').insert([leader]);
             if (error) throw new Error(this.parseError(error, "Thêm cán bộ"));
+            this.invalidateCache('leaders'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -492,6 +614,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('leaders').update(leader).eq('id', id);
             if (error) throw new Error(this.parseError(error, "Cập nhật cán bộ"));
+            this.invalidateCache('leaders'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -501,6 +624,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('leaders').delete().eq('id', id);
             if (error) throw new Error(this.parseError(error, "Xóa cán bộ"));
+            this.invalidateCache('leaders'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -509,9 +633,17 @@ class ApiClient {
     // --- MEDIA ---
     async getMedia(): Promise<MediaItem[]> {
         try {
+            // Check cache first
+            const cached = this.getCached('media');
+            if (cached) return cached;
+
             const { data, error } = await supabase.from('media').select('*');
             if (error) throw new Error(this.parseError(error, "Tải thư viện media"));
-            return data || [];
+            const result = data || [];
+
+            // Cache the result
+            this.setCache('media', result);
+            return result;
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -521,6 +653,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('media').insert([m]);
             if (error) throw new Error(this.parseError(error, "Thêm media"));
+            this.invalidateCache('media'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -530,6 +663,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('media').update(m).eq('id', id);
             if (error) throw new Error(this.parseError(error, "Cập nhật media"));
+            this.invalidateCache('media'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -539,6 +673,7 @@ class ApiClient {
         try {
             const { error } = await supabase.from('media').delete().eq('id', id);
             if (error) throw new Error(this.parseError(error, "Xóa media"));
+            this.invalidateCache('media'); // Clear cache
         } catch (e: any) {
             throw new Error(e.message);
         }
@@ -622,7 +757,74 @@ class ApiClient {
         }
     }
 
+    // --- READ HISTORY (Nhận đọc lịch sử) ---
+    async markMilestoneAsRead(userId: string, userName: string, userRank: string, unit: string, milestoneId: string, milestoneTitle: string) {
+        try {
+            const readHistoryId = `read_${userId}_${milestoneId}_${Date.now()}`;
+            const payload = {
+                id: readHistoryId,
+                user_id: userId,
+                user_name: userName,
+                user_rank: userRank,
+                unit: unit,
+                milestone_id: milestoneId,
+                milestone_title: milestoneTitle,
+                read_at: new Date().toISOString()
+            };
+            const { error } = await supabase.from('read_history').insert([payload]);
+            if (error) throw new Error(this.parseError(error, "Ghi nhận đã đọc lịch sử"));
+            console.log('✅ Đã ghi nhận thành công: người dùng', userName, 'đã đọc', milestoneTitle);
+        } catch (e: any) {
+            console.error('❌ Lỗi ghi nhận đã đọc:', e.message);
+            throw new Error(e.message);
+        }
+    }
+
+    async getReadHistoryByMilestone(milestoneId: string): Promise<any[]> {
+        try {
+            const { data, error } = await supabase
+                .from('read_history')
+                .select('*')
+                .eq('milestone_id', milestoneId)
+                .order('read_at', { ascending: false });
+            
+            if (error) throw new Error(this.parseError(error, "Tải lịch sử đọc"));
+            
+            return (data || []).map((r: any) => ({
+                id: r.id,
+                userId: r.user_id,
+                userName: r.user_name,
+                userRank: r.user_rank,
+                unit: r.unit,
+                milestoneId: r.milestone_id,
+                milestoneTitle: r.milestone_title,
+                readAt: r.read_at
+            }));
+        } catch (e: any) {
+            console.error('❌ Lỗi tải lịch sử đọc:', e.message);
+            throw new Error(e.message);
+        }
+    }
+
+    async checkUserHasReadMilestone(userId: string, milestoneId: string): Promise<boolean> {
+        try {
+            const { data, error } = await supabase
+                .from('read_history')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('milestone_id', milestoneId)
+                .limit(1);
+            
+            if (error) throw new Error(this.parseError(error, "Kiểm tra lịch sử đọc"));
+            return (data && data.length > 0) || false;
+        } catch (e: any) {
+            console.error('❌ Lỗi kiểm tra lịch sử đọc:', e.message);
+            return false;
+        }
+    }
+
     // --- SEED DATA ---
+
     async seedAllData(): Promise<{ success: boolean; message: string }> {
         try {
             // Sample articles
