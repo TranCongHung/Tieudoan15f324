@@ -15,7 +15,7 @@ export const useLazyLoading = (options: UseLazyLoadingOptions = {}) => {
 
   const [isIntersecting, setIsIntersecting] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
-  const elementRef = useRef<HTMLElement>(null);
+  const elementRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!enabled || !elementRef.current) return;

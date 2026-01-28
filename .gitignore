@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Security - NEVER commit database credentials
+api/config.php
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Backup files
+*.sql.backup
+*.backup

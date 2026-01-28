@@ -917,3 +917,4 @@ class ApiClient {
 }
 
 export const apiService = new ApiClient();
+export const apiClient = apiService;
